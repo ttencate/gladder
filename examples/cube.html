@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Glower : Cube example</title>
+    <script src="../src/glower.js"></script>
+  </head>
+  <body>
+    <h1>Glower : Cube example</h1>
+    <p>Because every OpenGL demo needs a spinning cube, right?</p>
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <script id="vertex-shader" type="x-shader/x-vertex">
+      uniform mat4 transform;
+      attribute vec3 position;
+      void main() {
+        gl_Position = transform * vec4(position, 1.0);
+      }
+    </script>
+    <script id="fragment-shader" type="x-shader/x-fragment">
+      void main() {
+        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+      }
+    </script>
+    <script>
+      var gl = Glower.initGl("canvas", function(msg) { alert(msg); });
+      var program = Glower.programFromScripts("vertex-shader", "fragment-shader");
+      console.log(program);
+    </script>
+  </body>
+</html>
