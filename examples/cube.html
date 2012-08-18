@@ -15,31 +15,34 @@
     <script id="vertex-shader" type="x-shader/x-vertex">
       uniform mat4 transform;
       attribute vec3 position;
+      varying vec4 color;
       void main() {
-        gl_Position = transform * vec4(position, 1.0);
+        gl_Position = transform * vec4(position - 0.5, 1.0);
+        color = vec4(position, 1.0);
       }
     </script>
 
     <script id="fragment-shader" type="x-shader/x-fragment">
+      precision mediump float;
+      varying vec4 color;
       void main() {
-        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+        gl_FragColor = color;
       }
     </script>
 
     <script>
-      var gladder = new Gladder.createContext({
+      var gla = new Gladder({
         canvas: "canvas",
         debug: true,
         errorCallback: function(err) { console.error(err); },
       });
-      var gl = gladder.gl;
 
-      gladder.setFullViewport();
-      gl.clearColor(0.0, 0.0, 0.0, 1.0);
-      gl.enable(gl.DEPTH_TEST);
-      gl.enable(gl.CULL_FACE);
+      gla.viewport.setFull();
+      gla.setClearColor(1, 1, 1);
+      gla.enableDepthTest();
+      gla.enableCullFace();
 
-      var program = gladder.createProgram({
+      var program = new gla.Program({
         vertexShader: "vertex-shader",
         fragmentShader: "fragment-shader",
         uniforms: { transform: "mat4" },
@@ -47,40 +50,47 @@
       });
       program.use();
 
-      // Hack hack hack...
-
       var cubeData = [
-        0,0,0, 0,1,0, 1,1,0, 1,0,0, // x=0 face
-        0,0,1, 1,0,1, 1,1,1, 0,1,1, // x=1 face
-        0,0,0, 1,0,0, 1,0,1, 0,0,1, // y=0 face
-        0,1,0, 0,1,1, 1,1,1, 1,1,0, // y=1 face
-        0,0,0, 0,0,1, 0,1,1, 0,1,0, // z=0 face
-        1,0,0, 1,1,0, 1,1,1, 1,0,1, // z=1 face
+        0,0,0, 0,1,0, 1,1,0, 0,0,0, 1,1,0, 1,0,0, // x=0 face
+        0,0,1, 1,0,1, 1,1,1, 0,0,1, 1,1,1, 0,1,1, // x=1 face
+        0,0,0, 1,0,0, 1,0,1, 0,0,0, 1,0,1, 0,0,1, // y=0 face
+        0,1,0, 0,1,1, 1,1,1, 0,1,0, 1,1,1, 1,1,0, // y=1 face
+        0,0,0, 0,0,1, 0,1,1, 0,0,0, 0,1,1, 0,1,0, // z=0 face
+        1,0,0, 1,1,0, 1,1,1, 1,0,0, 1,1,1, 1,0,1, // z=1 face
       ];
 
-      var modelViewMatrix = mat4.create();
+      var buffer = new gla.Buffer({
+        data: cubeData,
+        componentsPerItem: 3,
+      });
+
+      var modelMatrix = mat4.create();
+      mat4.identity(modelMatrix);
+
+      var viewMatrix = mat4.create();
+      mat4.identity(viewMatrix);
+      mat4.translate(viewMatrix, [0, 0, -3]);
+
       var projectionMatrix = mat4.create();
-      mat4.perspective(45, gladder.canvas.width / gladder.canvas.height, 0.1, 100.0, projectionMatrix);
+      mat4.perspective(45, gla.canvas.width / gla.canvas.height, 1.0, 10.0, projectionMatrix);
 
-      var buffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubeData), gl.STATIC_DRAW);
-      var itemSize = 3;
-      var numItems = 24;
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      var transform = mat4.create();
 
-      gladder.mainLoop(function(delta) {
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gla.mainLoop(function(delta) {
+        gla.clear({ colorBuffer: true, depthBuffer: true });
 
-        mat4.identity(modelViewMatrix);
-        mat4.translate(modelViewMatrix, [0, 0, -10]);
+        mat4.rotate(modelMatrix, 0.0008 * delta, [1, 0, 0]);
+        mat4.rotate(modelMatrix, 0.0005 * delta, [0, 1, 0]);
+        mat4.rotate(modelMatrix, 0.0003 * delta, [0, 0, 1]);
 
-        var transform = mat4.create();
-        mat4.multiply(projectionMatrix, modelViewMatrix, transform);
+        mat4.identity(transform);
+        mat4.multiply(transform, projectionMatrix);
+        mat4.multiply(transform, viewMatrix);
+        mat4.multiply(transform, modelMatrix);
 
-        gl.vertexAttribPointer(program.attributes.position, itemSize, gl.FLOAT, false, 0, 0);
         program.uniforms.transform.set(false, transform);
-        gl.drawArrays(gl.QUADS, 0, numItems);
+        program.attributes.position.set(buffer);
+        buffer.drawTriangles();
       });
     </script>
   </body>
