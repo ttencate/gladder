@@ -1,17 +1,17 @@
-What is Glower?
+What is Gladder?
 ===============
 
-Glower is a WebGL framework, written in JavaScript. Glower is...
+Gladder is a WebGL framework, written in JavaScript. Gladder is...
 
-* ... low-level, even more so than [GLOW](http://i-am-glow.com/). You need to know WebGL to use it.
-* ... thin. So thin, in fact, that Glower objects can be used in raw WebGL calls directly.
+* ... opaque. It does not expose WebGL, but rather aims to wrap it in a straightforward way.
+* ... thin. Many Gladder classes are direct equivalents of WebGL constructs.
 * ... light. It has no dependencies, other than WebGL itself.
 * ... flexible. It tries to make as few assumptions about your application as possible.
 * ... unobtrusive. It does not change default behaviour of anything.
 * ... cross-browser. It abstracts away browser differences.
 
-Glower is not...
+Gladder is not...
 
 * ... a scene graph. You can build your own on top of it, if you like.
 * ... a 3D library. It does not know anything about model loading, for example.
-* ... a game engine.
+* ... a game engine. You'll have to write your own input handling, sound, physics, etcetera.
