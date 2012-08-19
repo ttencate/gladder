@@ -201,14 +201,14 @@ function Gladder(args) {
   // BUFFERS //
   /////////////
   
-  this.Buffer = function(args) {
+  this.Buffer = function Buffer(args) {
     processArgs(args, {
       data: REQUIRED,
       componentsPerItem: REQUIRED,
       type: Float32Array,
       normalized: false,
       stride: 0,
-      usage: this.constructor.Usage.STATIC_DRAW,
+      usage: Buffer.Usage.STATIC_DRAW,
     });
 
     var glBuffer = gl.createBuffer();
@@ -474,9 +474,9 @@ function Gladder(args) {
     // TODO add to other classes consistently
     this._id = index;
     this.withActivated = function(func) {
-      if (index !== this.constructor.active) {
+      if (index !== TextureUnit.active) {
         gl.activeTexture(glUnit);
-        this.constructor.active = index;
+        TextureUnit.active = index;
       }
       func();
     };
@@ -499,13 +499,13 @@ function Gladder(args) {
   // TEXTURES //
   //////////////
 
-  this.Texture = function(args) {
+  this.Texture = function Texture(args) {
     processArgs(args, {
-      target: this.constructor.Target.TEXTURE_2D,
-      minFilter: this.constructor.Filter.NEAREST_MIPMAP_LINEAR,
-      magFilter: this.constructor.Filter.LINEAR,
-      wrapS: this.constructor.Wrap.REPEAT,
-      wrapT: this.constructor.Wrap.REPEAT,
+      target: Texture.Target.TEXTURE_2D,
+      minFilter: Texture.Filter.NEAREST_MIPMAP_LINEAR,
+      magFilter: Texture.Filter.LINEAR,
+      wrapS: Texture.Wrap.REPEAT,
+      wrapT: Texture.Wrap.REPEAT,
     });
 
     var glTexture = gl.createTexture();
@@ -546,10 +546,10 @@ function Gladder(args) {
         // TODO allow loading from URL
         width: REQUIRED,
         height: REQUIRED,
-        target: this.constructor.Target.TEXTURE_2D,
+        target: gla.Texture.Target.TEXTURE_2D,
         level: 0,
-        format: this.constructor.Format.RGBA,
-        type: this.constructor.Type.UNSIGNED_BYTE,
+        format: gla.Texture.Format.RGBA,
+        type: gla.Texture.Type.UNSIGNED_BYTE,
         pixels: null,
       });
       this.withBound(function() {
