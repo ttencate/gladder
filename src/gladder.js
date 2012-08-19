@@ -33,6 +33,7 @@ function Gladder(args) {
   var REQUIRED = new Object();
 
   function processArgs(args, defaultArgs) {
+    // TODO check enum values on request
     for (var key in defaultArgs) {
       if (!defaultArgs.hasOwnProperty(key)) continue;
       if (!args.hasOwnProperty(key) || args[key] === undefined) {
@@ -118,6 +119,7 @@ function Gladder(args) {
   // STATE BITS //
   ////////////////
   
+  // TODO cache state bit values
   function createStateBitFunc(funcName, bitName) {
     gla["enable" + funcName] = function(enable) {
       if (enable || enable === undefined) {
@@ -231,6 +233,7 @@ function Gladder(args) {
       default: throw new Error("Unsupported buffer type " + args.type);
     };
 
+    // TODO create withBound function instead
     this.bindArray = function() {
       gl.bindBuffer(gl.ARRAY_BUFFER, glBuffer);
     };
@@ -390,6 +393,7 @@ function Gladder(args) {
         enableArray(false);
         vSetter.apply(gl, args);
       } else if (args[1] instanceof gla.Buffer) {
+        // Received a buffer
         var buffer = args[1];
         buffer.bindArray();
         enableArray(true);
@@ -467,6 +471,7 @@ function Gladder(args) {
 
   function TextureUnit(index) {
     var glUnit = gl.TEXTURE0 + index;
+    // TODO add to other classes consistently
     this._id = index;
     this.withActivated = function(func) {
       if (index !== this.constructor.active) {
@@ -514,6 +519,7 @@ function Gladder(args) {
         unit = 0;
       }
       gla.textureUnits[unit].withActivated(function() {
+        // TODO cache bound textures
         gl.bindTexture(target, glTexture);
         func();
       });
@@ -521,6 +527,7 @@ function Gladder(args) {
 
     this.setFilter = function(min, mag) {
       this.withBound(function() {
+        // TODO cache parameters
         gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, min);
         gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, mag);
       });
@@ -535,6 +542,10 @@ function Gladder(args) {
 
     this.setImage = function(args) {
       processArgs(args, {
+        // TODO accept HTML images/videos/...
+        // TODO allow loading from URL
+        width: REQUIRED,
+        height: REQUIRED,
         target: this.constructor.Target.TEXTURE_2D,
         level: 0,
         format: this.constructor.Format.RGBA,
