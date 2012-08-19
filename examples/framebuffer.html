@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Gladder : Framebuffer example</title>
+    <script src="../src/gl-matrix.js"></script>
+    <script src="../src/webgl-debug.js"></script>
+    <script src="../src/gladder.js"></script>
+  </head>
+  <body>
+    <h1>Gladder : Framebuffer example</h1>
+    <p>This shows how to use framebuffers for post-processing effects, such as a horizontal Gaussian blur.</p>
+
+    <canvas id="canvas" width="640" height="640"></canvas>
+
+    <script id="triangle-vertex-shader" type="x-shader/x-vertex">
+      uniform mat4 transform;
+      attribute vec2 position;
+      varying vec4 color;
+      void main() {
+        gl_Position = transform * vec4(position, 0.0, 1.0);
+        color = vec4(position, 1.0, 1.0);
+      }
+    </script>
+
+    <script id="triangle-fragment-shader" type="x-shader/x-fragment">
+      precision mediump float;
+      varying vec4 color;
+      void main() {
+        gl_FragColor = color;
+      }
+    </script>
+
+    <script id="effects-vertex-shader" type="x-shader/x-vertex">
+      attribute vec2 position;
+      varying vec2 texCoord;
+      void main() {
+        gl_Position = vec4(2.0 * position - 1.0, 0.0, 1.0);
+        texCoord = position;
+      }
+    </script>
+
+    <script id="effects-fragment-shader" type="x-shader/x-fragment">
+      precision mediump float;
+      varying vec2 texCoord;
+      uniform float offset;
+      uniform sampler2D sampler;
+      void main() {
+        gl_FragColor =
+          texture2D(sampler, vec2(texCoord.x - 4.0*offset, texCoord.y)) * 0.05 +
+          texture2D(sampler, vec2(texCoord.x - 3.0*offset, texCoord.y)) * 0.09 +
+          texture2D(sampler, vec2(texCoord.x - 2.0*offset, texCoord.y)) * 0.12 +
+          texture2D(sampler, vec2(texCoord.x -     offset, texCoord.y)) * 0.15 +
+          texture2D(sampler, vec2(texCoord.x,              texCoord.y)) * 0.16 +
+          texture2D(sampler, vec2(texCoord.x +     offset, texCoord.y)) * 0.15 +
+          texture2D(sampler, vec2(texCoord.x + 2.0*offset, texCoord.y)) * 0.12 +
+          texture2D(sampler, vec2(texCoord.x + 3.0*offset, texCoord.y)) * 0.09 +
+          texture2D(sampler, vec2(texCoord.x + 4.0*offset, texCoord.y)) * 0.05;
+      }
+    </script>
+
+    <script>
+      var gla = new Gladder({
+        canvas: "canvas",
+        debug: true,
+        errorCallback: function(err) { console.error(err); },
+      });
+
+      gla.clear({ color: [0, 0, 0] });
+
+      var triangleProgram = new gla.Program({
+        vertexShader: "triangle-vertex-shader",
+        fragmentShader: "triangle-fragment-shader",
+        uniforms: { transform: "mat4" },
+        attributes: { position: "vec2" },
+      });
+
+      var triangleBuffer = new gla.Buffer({
+        data: [ 0,1, -0.5*Math.sqrt(3),-0.5, 0.5*Math.sqrt(3),-0.5 ],
+        componentsPerItem: 2,
+      });
+
+      var transform = mat4.create();
+
+      var colorBuffer = new gla.Texture({
+        minFilter: gla.Texture.Filter.NEAREST,
+        magFilter: gla.Texture.Filter.NEAREST,
+        wrapS: gla.Texture.Wrap.CLAMP_TO_EDGE,
+        wrapT: gla.Texture.Wrap.CLAMP_TO_EDGE,
+        width: gla.canvas.width,
+        height: gla.canvas.height,
+      });
+
+      var framebuffer = new gla.Framebuffer({
+        colorBuffer: colorBuffer,
+      });
+      framebuffer.checkComplete();
+
+      var effectsProgram = new gla.Program({
+        vertexShader: "effects-vertex-shader",
+        fragmentShader: "effects-fragment-shader",
+        uniforms: { sampler: "sampler2D", offset: "float" },
+        attributes: { position: "vec2" },
+      });
+
+      var unitQuadBuffer = new gla.Buffer({
+        data: [ 0,0, 1,0, 1,1, 0,0, 1,1, 0,1 ],
+        componentsPerItem: 2,
+      });
+
+      var angle = 0;
+      gla.mainLoop(function(delta) {
+        angle += 0.0001 * delta;
+        mat4.identity(transform);
+        mat4.rotate(transform, angle, [0, 0, 1]);
+
+        // Render the triangle to the framebuffer
+        framebuffer.withBound(function() {
+          gla.clear({ color: [1, 1, 1] });
+
+          triangleProgram.use();
+          triangleProgram.uniforms.transform.set(false, transform);
+          triangleProgram.attributes.position.set(triangleBuffer);
+          triangleBuffer.drawTriangles();
+        });
+
+        // Render the framebuffer contents to the screen
+        effectsProgram.use();
+        effectsProgram.uniforms.sampler.set(0);
+        effectsProgram.uniforms.offset.set(1.0 / gla.canvas.width);
+        effectsProgram.attributes.position.set(unitQuadBuffer);
+        colorBuffer.withBound(0, function() {
+          unitQuadBuffer.drawTriangles();
+        });
+      });
+    </script>
+  </body>
+</html>
