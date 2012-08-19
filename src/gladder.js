@@ -693,6 +693,7 @@ function Gladder(args) {
       if (!args.attributes.hasOwnProperty(key)) continue;
       args.program.attributes[key].set(args.attributes[key]);
     }
+    // TODO add support for drawElements
     gl.drawArrays(args.mode, args.first, args.count);
   };
 

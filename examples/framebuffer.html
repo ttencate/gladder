@@ -16,17 +16,20 @@
       uniform mat4 transform;
       attribute vec2 position;
       varying vec4 color;
+      varying vec2 pos;
       void main() {
         gl_Position = transform * vec4(position, 0.0, 1.0);
-        color = vec4(position, 1.0, 1.0);
+        pos = position;
       }
     </script>
 
     <script id="triangle-fragment-shader" type="x-shader/x-fragment">
       precision mediump float;
-      varying vec4 color;
+      varying vec2 pos;
       void main() {
-        gl_FragColor = color;
+        float brightness = step(0.0, sin(24.0 * atan(pos.y, pos.x)));
+        gl_FragColor.rgb = vec3(1.0, 1.0, 1.0) * brightness;
+        gl_FragColor.a = 1.0;
       }
     </script>
 
@@ -75,7 +78,7 @@
       });
 
       var triangleBuffer = new gla.Buffer({
-        data: [ 0,1, -0.5*Math.sqrt(3),-0.5, 0.5*Math.sqrt(3),-0.5 ],
+        data: [ 0,3, -1.5*Math.sqrt(3),-1.5, 1.5*Math.sqrt(3),-1.5 ],
         componentsPerItem: 2,
       });
 
@@ -109,7 +112,7 @@
 
       var angle = 0;
       gla.mainLoop(function(delta) {
-        angle += 0.0001 * delta;
+        angle += 0.00002 * delta;
         mat4.identity(transform);
         mat4.rotate(transform, angle, [0, 0, 1]);
 
