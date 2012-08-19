@@ -27,7 +27,7 @@
       precision mediump float;
       varying vec2 pos;
       void main() {
-        float brightness = step(0.0, sin(24.0 * atan(pos.y, pos.x)));
+        float brightness = step(0.0, sin(12.0 * (atan(pos.y, pos.x) + 3.0 * length(pos))));
         gl_FragColor.rgb = vec3(1.0, 1.0, 1.0) * brightness;
         gl_FragColor.a = 1.0;
       }
