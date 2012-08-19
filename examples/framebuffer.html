@@ -117,19 +117,23 @@
         framebuffer.withBound(function() {
           gla.clear({ color: [1, 1, 1] });
 
-          triangleProgram.use();
-          triangleProgram.uniforms.transform.set(false, transform);
-          triangleProgram.attributes.position.set(triangleBuffer);
-          triangleBuffer.drawTriangles();
+          gla.draw({
+            program: triangleProgram,
+            uniforms: { transform: transform },
+            attributes: { position: triangleBuffer },
+            count: triangleBuffer.numItems,
+          });
         });
 
         // Render the framebuffer contents to the screen
-        effectsProgram.use();
-        effectsProgram.uniforms.sampler.set(0);
-        effectsProgram.uniforms.offset.set(1.0 / gla.canvas.width);
-        effectsProgram.attributes.position.set(unitQuadBuffer);
+        // TODO auto-bind textures
         colorBuffer.withBound(0, function() {
-          unitQuadBuffer.drawTriangles();
+          gla.draw({
+            program: effectsProgram,
+            uniforms: { sampler: 0, offset: 1.0 / gla.canvas.width },
+            attributes: { position: unitQuadBuffer },
+            count: unitQuadBuffer.numItems,
+          });
         });
       });
     </script>

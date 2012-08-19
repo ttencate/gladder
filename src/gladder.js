@@ -30,10 +30,15 @@ function Gladder(args) {
     return element;
   };
 
-  function setDefaultArgs(args, defaultArgs) {
+  var REQUIRED = new Object();
+
+  function processArgs(args, defaultArgs) {
     for (var key in defaultArgs) {
       if (!defaultArgs.hasOwnProperty(key)) continue;
       if (!args.hasOwnProperty(key) || args[key] === undefined) {
+        if (defaultArgs[key] === REQUIRED) {
+          throw new Error("Argument " + key + " is required");
+        }
         args[key] = defaultArgs[key];
       }
     }
@@ -43,7 +48,8 @@ function Gladder(args) {
   // CONTEXT //
   /////////////
 
-  setDefaultArgs(args, {
+  processArgs(args, {
+    canvas: REQUIRED,
     debug: false,
     errorCallback: null,
     callCallback: null,
@@ -149,15 +155,22 @@ function Gladder(args) {
   };
 
   this.mainLoop = function(callback) {
+    this.mainLoop.exit = false;
     var last = Date.now();
     var drawFrame = function() {
       var now = Date.now();
       var delta = Math.max(0, now - last);
       last = now;
       callback(delta);
-      gla.requestAnimationFrame(drawFrame, gla.canvas);
+      if (!gla.mainLoop.exit) {
+        gla.requestAnimationFrame(drawFrame, gla.canvas);
+      }
     }
     this.requestAnimationFrame(drawFrame, canvas);
+  };
+
+  this.exitMainLoop = function() {
+    this.mainLoop.exit = true;
   };
 
   this.flush = function() {
@@ -187,7 +200,9 @@ function Gladder(args) {
   /////////////
   
   this.Buffer = function(args) {
-    setDefaultArgs(args, {
+    processArgs(args, {
+      data: REQUIRED,
+      componentsPerItem: REQUIRED,
       type: Float32Array,
       normalized: false,
       stride: 0,
@@ -223,10 +238,6 @@ function Gladder(args) {
     this.bindElementArray = function() {
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glBuffer);
     };
-
-    this.drawTriangles = function() {
-      gl.drawArrays(gl.TRIANGLES, 0, this.numItems);
-    };
   };
 
   this.Buffer.Usage = {
@@ -253,6 +264,11 @@ function Gladder(args) {
   };
 
   this.Shader = function(args) {
+    processArgs(args, {
+      source: REQUIRED,
+      type: REQUIRED,
+    });
+
     var source;
     try {
       source = getScriptContents(args.source);
@@ -298,36 +314,37 @@ function Gladder(args) {
     }
     var vSuffix = suffix + "v";
 
-    var setter = null;
     if (type.substring(0, 3) == "mat") {
-      vSuffix = "Matrix" + vSuffix;
-      suffix = null;
+      var vSetter = gl["uniformMatrix" + vSuffix];
+      this.set = function(matrix) {
+        vSetter.call(gl, glUniform, false, matrix);
+      };
     } else {
-      setter = gl["uniform" + suffix];
+      var setter = gl["uniform" + suffix];
+      var vSetter = gl["uniform" + vSuffix];
+      this.set = function() {
+        var args = Array.prototype.slice.call(arguments);
+        args.unshift(glUniform);
+        if (args[args.length - 1][0] !== undefined) {
+          // Received an array
+          console.log(args);
+          vSetter.apply(gl, args);
+        } else if (args[1] instanceof TextureUnit) {
+          // Received a texture unit
+          setter.call(gl, args[1]._id);
+        } else if (setter !== null) {
+          // Received some scalars
+          setter.apply(gl, args);
+        } else {
+          throw new Error("Uniform cannot be set from " + args.join(", "));
+        }
+        args.shift();
+        value = args;
+      }
     }
-    var vSetter = gl["uniform" + vSuffix];
 
     this.get = function() {
       return value;
-    }
-    
-    this.set = function() {
-      var args = Array.prototype.slice.call(arguments);
-      args.unshift(glUniform);
-      if (args[args.length - 1][0] !== undefined) {
-        // Received an array
-        vSetter.apply(gl, args);
-      } else if (args[1] instanceof TextureUnit) {
-        // Received a texture unit
-        setter.call(gl, args[1]._id);
-      } else if (setter !== null) {
-        // Received some scalars
-        setter.apply(gl, args);
-      } else {
-        throw new Error("Uniform cannot be set from " + args.join(", "));
-      }
-      args.shift();
-      value = args;
     }
   }
 
@@ -405,6 +422,13 @@ function Gladder(args) {
   };
 
   this.Program = function(args) {
+    processArgs(args, {
+      vertexShader: REQUIRED,
+      fragmentShader: REQUIRED,
+      uniforms: {},
+      attributes: {},
+    });
+
     var glProgram = gl.createProgram();
     // TODO accept Shader objects for vertexShader and fragmentShader args
     var vertexShader = new gla.Shader({ source: args.vertexShader, type: gla.Shader.Type.VERTEX_SHADER });
@@ -412,29 +436,25 @@ function Gladder(args) {
     linkProgram(glProgram, vertexShader, fragmentShader);
 
     this.uniforms = {};
-    if (args.uniforms) {
-      for (var name in args.uniforms) {
-        if (!args.uniforms.hasOwnProperty(name)) { continue; }
-        var type = args.uniforms[name];
-        var glUniform = gl.getUniformLocation(glProgram, name);
-        if (glUniform === null) {
-          console.log("Warning: uniform " + name + " not found in program");
-        }
-        this.uniforms[name] = new Uniform(glUniform, type);
+    for (var name in args.uniforms) {
+      if (!args.uniforms.hasOwnProperty(name)) { continue; }
+      var type = args.uniforms[name];
+      var glUniform = gl.getUniformLocation(glProgram, name);
+      if (glUniform === null) {
+        console.log("Warning: uniform " + name + " not found in program");
       }
+      this.uniforms[name] = new Uniform(glUniform, type);
     }
 
     this.attributes = {};
-    if (args.attributes) {
-      for (var name in args.attributes) {
-        if (!args.attributes.hasOwnProperty(name)) { continue; }
-        var type = args.attributes[name];
-        var glAttribute = gl.getAttribLocation(glProgram, name);
-        if (glAttribute === null) {
-          console.log("Warning: attribute " + name + " not found in program");
-        }
-        this.attributes[name] = new Attribute(glAttribute, type);
+    for (var name in args.attributes) {
+      if (!args.attributes.hasOwnProperty(name)) { continue; }
+      var type = args.attributes[name];
+      var glAttribute = gl.getAttribLocation(glProgram, name);
+      if (glAttribute === null) {
+        console.log("Warning: attribute " + name + " not found in program");
       }
+      this.attributes[name] = new Attribute(glAttribute, type);
     }
 
     this.use = function() {
@@ -476,7 +496,7 @@ function Gladder(args) {
   //////////////
 
   this.Texture = function(args) {
-    setDefaultArgs(args, {
+    processArgs(args, {
       target: this.constructor.Target.TEXTURE_2D,
       minFilter: this.constructor.Filter.NEAREST_MIPMAP_LINEAR,
       magFilter: this.constructor.Filter.LINEAR,
@@ -515,7 +535,7 @@ function Gladder(args) {
     };
 
     this.setImage = function(args) {
-      setDefaultArgs(args, {
+      processArgs(args, {
         target: this.constructor.Target.TEXTURE_2D,
         level: 0,
         format: this.constructor.Format.RGBA,
@@ -588,6 +608,12 @@ function Gladder(args) {
   //////////////////
 
   this.Framebuffer = function(args) {
+    processArgs(args, {
+      colorBuffer: null,
+      depthBuffer: null,
+      stencilBuffer: null,
+    });
+
     var glFramebuffer = gl.createFramebuffer();
 
     this.withBound = function(func) {
@@ -643,5 +669,40 @@ function Gladder(args) {
     if (args.stencilBuffer) {
       this.attachStencilBuffer(args.stencilBuffer);
     }
+  };
+
+  /////////////
+  // DRAWING //
+  /////////////
+
+  this.draw = function(args) {
+    processArgs(args, {
+      program: REQUIRED,
+      uniforms: {},
+      attributes: {},
+      mode: gla.draw.Mode.TRIANGLES,
+      first: 0,
+      count: REQUIRED,
+    });
+    args.program.use();
+    for (var key in args.uniforms) {
+      if (!args.uniforms.hasOwnProperty(key)) continue;
+      args.program.uniforms[key].set(args.uniforms[key]);
+    }
+    for (var key in args.attributes) {
+      if (!args.attributes.hasOwnProperty(key)) continue;
+      args.program.attributes[key].set(args.attributes[key]);
+    }
+    gl.drawArrays(args.mode, args.first, args.count);
+  };
+
+  this.draw.Mode = {
+    POINTS: gl.POINTS,
+    LINE_STRIP: gl.LINE_STRIP,
+    LINE_LOOP: gl.LINE_LOOP,
+    LINES: gl.LINES,
+    TRIANGLE_STRIP: gl.TRIANGLE_STRIP,
+    TRIANGLE_FAN: gl.TRIANGLE_FAN,
+    TRIANGLES: gl.TRIANGLES,
   };
 }

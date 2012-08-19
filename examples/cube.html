@@ -35,6 +35,7 @@
         canvas: "canvas",
         debug: true,
         errorCallback: function(err) { console.error(err); },
+        // callCallback: function(msg) { console.info(msg); },
       });
 
       gla.enableDepthTest();
@@ -86,9 +87,13 @@
         mat4.multiply(transform, viewMatrix);
         mat4.multiply(transform, modelMatrix);
 
-        program.uniforms.transform.set(false, transform);
-        program.attributes.position.set(buffer);
-        buffer.drawTriangles();
+        gla.draw({
+          program: program,
+          uniforms: { transform: transform },
+          attributes: { position: buffer },
+          type: gla.draw.Mode.TRIANGLES,
+          count: buffer.numItems,
+        });
       });
     </script>
   </body>
