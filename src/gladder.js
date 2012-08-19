@@ -327,7 +327,6 @@ function Gladder(args) {
         args.unshift(glUniform);
         if (args[args.length - 1][0] !== undefined) {
           // Received an array
-          console.log(args);
           vSetter.apply(gl, args);
         } else if (args[1] instanceof TextureUnit) {
           // Received a texture unit

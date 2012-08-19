@@ -8,7 +8,7 @@
   </head>
   <body>
     <h1>Gladder : Framebuffer example</h1>
-    <p>This shows how to use framebuffers for post-processing effects, such as a horizontal Gaussian blur.</p>
+    <p>This shows how to use framebuffers for post-processing effects, such as a Gaussian blur.</p>
 
     <canvas id="canvas" width="640" height="640"></canvas>
 
@@ -33,7 +33,7 @@
       }
     </script>
 
-    <script id="effects-vertex-shader" type="x-shader/x-vertex">
+    <script id="blur-vertex-shader" type="x-shader/x-vertex">
       attribute vec2 position;
       varying vec2 texCoord;
       void main() {
@@ -42,22 +42,22 @@
       }
     </script>
 
-    <script id="effects-fragment-shader" type="x-shader/x-fragment">
+    <script id="blur-fragment-shader" type="x-shader/x-fragment">
       precision mediump float;
       varying vec2 texCoord;
-      uniform float offset;
+      uniform vec2 offset;
       uniform sampler2D sampler;
       void main() {
         gl_FragColor =
-          texture2D(sampler, vec2(texCoord.x - 4.0*offset, texCoord.y)) * 0.05 +
-          texture2D(sampler, vec2(texCoord.x - 3.0*offset, texCoord.y)) * 0.09 +
-          texture2D(sampler, vec2(texCoord.x - 2.0*offset, texCoord.y)) * 0.12 +
-          texture2D(sampler, vec2(texCoord.x -     offset, texCoord.y)) * 0.15 +
-          texture2D(sampler, vec2(texCoord.x,              texCoord.y)) * 0.16 +
-          texture2D(sampler, vec2(texCoord.x +     offset, texCoord.y)) * 0.15 +
-          texture2D(sampler, vec2(texCoord.x + 2.0*offset, texCoord.y)) * 0.12 +
-          texture2D(sampler, vec2(texCoord.x + 3.0*offset, texCoord.y)) * 0.09 +
-          texture2D(sampler, vec2(texCoord.x + 4.0*offset, texCoord.y)) * 0.05;
+          texture2D(sampler, texCoord - 4.0 * offset) * 0.05 +
+          texture2D(sampler, texCoord - 3.0 * offset) * 0.09 +
+          texture2D(sampler, texCoord - 2.0 * offset) * 0.12 +
+          texture2D(sampler, texCoord -       offset) * 0.15 +
+          texture2D(sampler, texCoord               ) * 0.16 +
+          texture2D(sampler, texCoord -       offset) * 0.15 +
+          texture2D(sampler, texCoord - 2.0 * offset) * 0.12 +
+          texture2D(sampler, texCoord - 3.0 * offset) * 0.09 +
+          texture2D(sampler, texCoord - 4.0 * offset) * 0.05;
       }
     </script>
 
@@ -84,7 +84,16 @@
 
       var transform = mat4.create();
 
-      var colorBuffer = new gla.Texture({
+      // TODO get FBO to create these
+      var colorBuffer1 = new gla.Texture({
+        minFilter: gla.Texture.Filter.NEAREST,
+        magFilter: gla.Texture.Filter.NEAREST,
+        wrapS: gla.Texture.Wrap.CLAMP_TO_EDGE,
+        wrapT: gla.Texture.Wrap.CLAMP_TO_EDGE,
+        width: gla.canvas.width,
+        height: gla.canvas.height,
+      });
+      var colorBuffer2 = new gla.Texture({
         minFilter: gla.Texture.Filter.NEAREST,
         magFilter: gla.Texture.Filter.NEAREST,
         wrapS: gla.Texture.Wrap.CLAMP_TO_EDGE,
@@ -93,15 +102,19 @@
         height: gla.canvas.height,
       });
 
-      var framebuffer = new gla.Framebuffer({
-        colorBuffer: colorBuffer,
+      var framebuffer1 = new gla.Framebuffer({
+        colorBuffer: colorBuffer1,
       });
-      framebuffer.checkComplete();
+      framebuffer1.checkComplete();
+      var framebuffer2 = new gla.Framebuffer({
+        colorBuffer: colorBuffer2,
+      });
+      framebuffer2.checkComplete();
 
-      var effectsProgram = new gla.Program({
-        vertexShader: "effects-vertex-shader",
-        fragmentShader: "effects-fragment-shader",
-        uniforms: { sampler: "sampler2D", offset: "float" },
+      var blurProgram = new gla.Program({
+        vertexShader: "blur-vertex-shader",
+        fragmentShader: "blur-fragment-shader",
+        uniforms: { sampler: "sampler2D", offset: "vec2" },
         attributes: { position: "vec2" },
       });
 
@@ -116,8 +129,8 @@
         mat4.identity(transform);
         mat4.rotate(transform, angle, [0, 0, 1]);
 
-        // Render the triangle to the framebuffer
-        framebuffer.withBound(function() {
+        // Render the triangle to the first framebuffer
+        framebuffer1.withBound(function() {
           gla.clear({ color: [1, 1, 1] });
 
           gla.draw({
@@ -128,12 +141,24 @@
           });
         });
 
+        // Render the horizontally blurred scene to the second framebuffer
+        framebuffer2.withBound(function() {
+          colorBuffer1.withBound(0, function() {
+            gla.draw({
+              program: blurProgram,
+              uniforms: { sampler: 0, offset: [0, 1 / gla.canvas.height] },
+              attributes: { position: unitQuadBuffer },
+              count: unitQuadBuffer.numItems,
+            });
+          });
+        });
+
         // Render the framebuffer contents to the screen
         // TODO auto-bind textures
-        colorBuffer.withBound(0, function() {
+        colorBuffer2.withBound(0, function() {
           gla.draw({
-            program: effectsProgram,
-            uniforms: { sampler: 0, offset: 1.0 / gla.canvas.width },
+            program: blurProgram,
+            uniforms: { sampler: 0, offset: [1 / gla.canvas.width, 0] },
             attributes: { position: unitQuadBuffer },
             count: unitQuadBuffer.numItems,
           });
