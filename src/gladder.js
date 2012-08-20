@@ -97,22 +97,53 @@ function Gladder(args) {
 
   this.canvas = canvas;
 
-  ////////////
-  // BASICS //
-  ////////////
+  //////////////
+  // CLEARING //
+  //////////////
+
+  var clearColor = [0, 0, 0, 0];
+  var clearDepth = 1;
+  var clearStencil = 0;
 
   this.clear = function(args) {
-    // TODO cache current color/depth
-    if (args.color) {
-      gl.clearColor(args.color[0], args.color[1], args.color[2], args.color[3] !== undefined ? args.color[3] : 1.0);
+    processArgs(args, {
+      color: null,
+      depth: null,
+      stencil: null,
+    });
+    var bits = 0;
+    if (args.color !== null) {
+      bits |= gl.COLOR_BUFFER_BIT;
+      var fullColor = [];
+      var colorChanged = false;
+      for (var i = 0; i <= 3; ++i) {
+        if (args.color[i] === undefined) {
+          fullColor[i] = fullColor[i-1];
+        } else {
+          fullColor[i] = args.color[i];
+        }
+        colorChanged = colorChanged || (fullColor[i] != clearColor[i]);
+      }
+      if (colorChanged) {
+        gl.clearColor(fullColor[0], fullColor[1], fullColor[2], fullColor[3]);
+        clearColor = fullColor;
+      }
     }
-    if (args.depth) {
-      gl.clearDepth(args.depth);
+    if (args.depth !== null) {
+      bits |= gl.DEPTH_BUFFER_BIT;
+      if (args.depth != clearDepth) {
+        gl.clearDepth(args.depth);
+        clearDepth = args.depth;
+      }
     }
-    gl.clear(
-        args.color ? gl.COLOR_BUFFER_BIT : 0 |
-        args.depth ? gl.DEPTH_BUFFER_BIT : 0 |
-        args.stencil ? gl.STENCIL_BUFFER_BIT : 0);
+    if (args.stencil !== null) {
+      bits |= gl.STENCIL_BUFFER_BIT;
+      if (args.stencil != clearStencil) {
+        gl.clearStencil(args.stencil);
+        clearStencil = args.stencil;
+      }
+    }
+    gl.clear(bits);
   };
 
   ////////////////
