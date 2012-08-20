@@ -419,6 +419,8 @@ function Gladder(args) {
     }
   };
 
+  var usedProgram = null;
+
   this.Program = function(args) {
     processArgs(args, {
       vertexShader: REQUIRED,
@@ -465,8 +467,10 @@ function Gladder(args) {
     }
 
     this.use = function() {
-      // TODO cache used program
-      gl.useProgram(glProgram);
+      if (this !== usedProgram) {
+        gl.useProgram(glProgram);
+        usedProgram = this;
+      }
     }
   };
 
@@ -622,7 +626,7 @@ function Gladder(args) {
   // RENDERBUFFERS //
   ///////////////////
 
-  // TODO
+  // TODO implement renderbuffers
 
   //////////////////
   // FRAMEBUFFERS //
