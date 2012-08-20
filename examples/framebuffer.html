@@ -66,6 +66,7 @@
         canvas: "canvas",
         debug: true,
         errorCallback: function(err) { console.error(err); },
+        callCallback: function(msg) { console.info(msg); },
       });
 
       gla.clear({ color: [0, 0, 0] });
@@ -87,6 +88,7 @@
       var framebuffer1 = new gla.Framebuffer({
         colorBuffer: gla.CREATE_TEXTURE_2D,
       });
+      // TODO move completeness check to draw func
       framebuffer1.checkComplete();
       var framebuffer2 = new gla.Framebuffer({
         colorBuffer: gla.CREATE_TEXTURE_2D,
@@ -125,28 +127,26 @@
 
         // Render the scene to the second framebuffer, vertically blurred
         framebuffer2.withBound(function() {
-          framebuffer1.colorBuffer.withBound(0, function() {
-            gla.draw({
-              program: blurProgram,
-              uniforms: { sampler: 0, offset: [0, 1 / gla.canvas.height] },
-              attributes: { position: unitQuadBuffer },
-              count: unitQuadBuffer.numItems,
-              mode: gla.DrawMode.TRIANGLE_FAN,
-            });
-          });
-        });
-
-        // Render the vertically blurred framebuffer to the screen, horizontally blurred
-        // TODO auto-bind textures
-        framebuffer2.colorBuffer.withBound(0, function() {
           gla.draw({
             program: blurProgram,
-            uniforms: { sampler: 0, offset: [1 / gla.canvas.width, 0] },
+            uniforms: { sampler: framebuffer1.colorBuffer, offset: [0, 1 / gla.canvas.height] },
             attributes: { position: unitQuadBuffer },
             count: unitQuadBuffer.numItems,
             mode: gla.DrawMode.TRIANGLE_FAN,
           });
         });
+
+        // Render the vertically blurred framebuffer to the screen, horizontally blurred
+        // TODO specify framebuffer as part of draw call
+        gla.draw({
+          program: blurProgram,
+          uniforms: { sampler: framebuffer2.colorBuffer, offset: [1 / gla.canvas.width, 0] },
+          attributes: { position: unitQuadBuffer },
+          count: unitQuadBuffer.numItems,
+          mode: gla.DrawMode.TRIANGLE_FAN,
+        });
+
+        if (angle > 0.01) gla.exitMainLoop();
       });
     </script>
   </body>

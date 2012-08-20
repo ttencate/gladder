@@ -350,6 +350,8 @@ function Gladder(args) {
   function Uniform(glUniform, type) {
     var value = null;
 
+    this.type = type;
+
     var suffix = {
       "bool": "1i",
       "int": "1i", "ivec2": "2i", "ivec3": "3i", "ivec4": "4i",
@@ -376,9 +378,6 @@ function Gladder(args) {
         if (args[args.length - 1][0] !== undefined) {
           // Received an array
           vSetter.apply(gl, args);
-        } else if (args[1] instanceof TextureUnit) {
-          // Received a texture unit
-          setter.call(gl, args[1]._id);
         } else if (setter !== null) {
           // Received some scalars
           setter.apply(gl, args);
@@ -515,6 +514,7 @@ function Gladder(args) {
     }
 
     this.use = function() {
+      // TODO cache used program
       gl.useProgram(glProgram);
     }
   };
@@ -523,31 +523,30 @@ function Gladder(args) {
   // TEXTURE UNITS //
   ///////////////////
 
+  var activeTextureUnit = 0;
+
   function TextureUnit(index) {
     var glUnit = gl.TEXTURE0 + index;
-    this._id = index; // TODO add to other classes consistently
 
     this.bound = {};
 
     function activate() {
-      if (TextureUnit.active !== index) {
+      if (activeTextureUnit !== index) {
         gl.activeTexture(glUnit);
-        TextureUnit.active = index;
+        activeTextureUnit = index;
       }
     }
 
-    this.bind = function(target, glTexture) {
-      if (this.bound[target] !== glTexture) {
+    this.bind = function(target, texture) {
+      if (this.bound[target] !== texture) {
         activate();
-        gl.bindTexture(target, glTexture);
-        this.bound[target] = glTexture;
+        gl.bindTexture(target, texture._id);
+        this.bound[target] = texture;
       }
     }
   }
 
-  TextureUnit.active = 0;
-
-  this.textureUnits = (function() {
+  textureUnits = (function() {
     var textureUnits = [];
     var count = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
     for (var i = 0; i < count; ++i) {
@@ -555,6 +554,10 @@ function Gladder(args) {
     }
     return textureUnits;
   })();
+
+  function getActiveTextureUnit() {
+    return textureUnits[activeTextureUnit];
+  }
 
   //////////////
   // TEXTURES //
@@ -576,22 +579,16 @@ function Gladder(args) {
 
     var parameters = {};
 
-    this.withBound = function(unit, func) {
-      if (func === undefined) {
-        func = unit;
-        unit = 0;
-      }
-      gla.textureUnits[unit].bind(target, glTexture);
-      func();
+    function bind() {
+      getActiveTextureUnit().bind(target, this);
     };
 
     function setParameter(parameter, value) {
-      this.withBound(function() {
-        if (parameters[parameter] !== value) {
-          gl.texParameteri(target, parameter, value);
-          parameters[parameter] = value;
-        }
-      });
+      if (parameters[parameter] !== value) {
+        bind.call(this);
+        gl.texParameteri(target, parameter, value);
+        parameters[parameter] = value;
+      }
     }
 
     this.setFilter = function(min, mag) {
@@ -616,9 +613,8 @@ function Gladder(args) {
         type: gla.Texture.Type.UNSIGNED_BYTE,
         pixels: null,
       });
-      this.withBound(function() {
-        gl.texImage2D(args.target, args.level, args.format, args.width, args.height, 0, args.format, args.type, args.pixels);
-      });
+      bind.call(this);
+      gl.texImage2D(args.target, args.level, args.format, args.width, args.height, 0, args.format, args.type, args.pixels);
     };
 
     this.setFilter(args.minFilter, args.magFilter);
@@ -781,15 +777,35 @@ function Gladder(args) {
       first: 0,
       count: REQUIRED,
     });
-    args.program.use();
+
+    var program = args.program;
+    program.use();
+
+    var currentTextureUnit = {};
     for (var key in args.uniforms) {
       if (!args.uniforms.hasOwnProperty(key)) continue;
-      args.program.uniforms[key].set(args.uniforms[key]);
+      var type = program.uniforms[key].type;
+      var value = args.uniforms[key];
+      switch (type) {
+        case "sampler2D":
+        case "samplerRect":
+          var target = { sampler2D: gl.TEXTURE_2D, samplerCube: gl.TEXTURE_CUBE_MAP }[type];
+          var current = currentTextureUnit[target] || 0;
+          textureUnits[current].bind(target, value);
+          program.uniforms[key].set(current);
+          currentTextureUnit[target] = current + 1;
+          break;
+        default:
+          program.uniforms[key].set(value);
+          break;
+      }
     }
+
     for (var key in args.attributes) {
       if (!args.attributes.hasOwnProperty(key)) continue;
-      args.program.attributes[key].set(args.attributes[key]);
+      program.attributes[key].set(args.attributes[key]);
     }
+
     // TODO add support for drawElements
     gl.drawArrays(args.mode, args.first, args.count);
   };
