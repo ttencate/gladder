@@ -478,9 +478,18 @@ function Gladder(args) {
     });
 
     var glProgram = gl.createProgram();
-    // TODO accept Shader objects for vertexShader and fragmentShader args
-    var vertexShader = new gla.Shader({ source: args.vertexShader, type: gla.Shader.Type.VERTEX_SHADER });
-    var fragmentShader = new gla.Shader({ source: args.fragmentShader, type: gla.Shader.Type.FRAGMENT_SHADER });
+    var vertexShader;
+    if (args.vertexShader instanceof gla.Shader) {
+      vertexShader = args.vertexShader;
+    } else {
+      vertexShader = new gla.Shader({ source: args.vertexShader, type: gla.Shader.Type.VERTEX_SHADER });
+    }
+    var fragmentShader;
+    if (args.fragmentShader instanceof gla.Shader) {
+      fragmentShader = args.fragmentShader;
+    } else {
+      fragmentShader = new gla.Shader({ source: args.fragmentShader, type: gla.Shader.Type.FRAGMENT_SHADER });
+    }
     linkProgram(glProgram, vertexShader, fragmentShader);
 
     this.uniforms = {};
