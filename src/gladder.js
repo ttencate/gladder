@@ -516,29 +516,36 @@ function Gladder(args) {
 
   function TextureUnit(index) {
     var glUnit = gl.TEXTURE0 + index;
-    // TODO add to other classes consistently
-    this._id = index;
-    this.withActivated = function(func) {
-      if (index !== TextureUnit.active) {
+    this._id = index; // TODO add to other classes consistently
+
+    this.bound = {};
+
+    function activate() {
+      if (TextureUnit.active !== index) {
         gl.activeTexture(glUnit);
         TextureUnit.active = index;
       }
-      func();
-    };
+    }
+
+    this.bind = function(target, glTexture) {
+      if (this.bound[target] !== glTexture) {
+        activate();
+        gl.bindTexture(target, glTexture);
+        this.bound[target] = glTexture;
+      }
+    }
   }
 
   TextureUnit.active = 0;
 
-  function createTextureUnits() {
+  this.textureUnits = (function() {
     var textureUnits = [];
     var count = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
     for (var i = 0; i < count; ++i) {
       textureUnits[i] = new TextureUnit(i);
     }
     return textureUnits;
-  }
-
-  this.textureUnits = createTextureUnits();
+  })();
 
   //////////////
   // TEXTURES //
@@ -563,11 +570,8 @@ function Gladder(args) {
         func = unit;
         unit = 0;
       }
-      gla.textureUnits[unit].withActivated(function() {
-        // TODO cache bound textures
-        gl.bindTexture(target, glTexture);
-        func();
-      });
+      gla.textureUnits[unit].bind(target, glTexture);
+      func();
     };
 
     this.setFilter = function(min, mag) {
@@ -681,6 +685,8 @@ function Gladder(args) {
       func();
       gl.bindFramebuffer(gl.FRAMEBUFFER, null); // TODO restore properly
     };
+
+    // TODO add delete() functions to this and other objects
 
     function attachBuffer(attachment, buffer, width, height) {
       this.withBound(function() {
