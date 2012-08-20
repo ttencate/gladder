@@ -565,6 +565,8 @@ function Gladder(args) {
 
     var target = args.target;
 
+    var parameters = {};
+
     this.withBound = function(unit, func) {
       if (func === undefined) {
         func = unit;
@@ -574,19 +576,23 @@ function Gladder(args) {
       func();
     };
 
-    this.setFilter = function(min, mag) {
+    function setParameter(parameter, value) {
       this.withBound(function() {
-        // TODO cache parameters
-        gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, min);
-        gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, mag);
+        if (parameters[parameter] !== value) {
+          gl.texParameteri(target, parameter, value);
+          parameters[parameter] = value;
+        }
       });
+    }
+
+    this.setFilter = function(min, mag) {
+      setParameter.call(this, gl.TEXTURE_MIN_FILTER, min);
+      setParameter.call(this, gl.TEXTURE_MAG_FILTER, mag === undefined ? min : mag);
     };
 
     this.setWrap = function(s, t) {
-      this.withBound(function() {
-        gl.texParameteri(target, gl.TEXTURE_WRAP_S, s);
-        gl.texParameteri(target, gl.TEXTURE_WRAP_T, t);
-      });
+      setParameter.call(this, gl.TEXTURE_WRAP_S, s);
+      setParameter.call(this, gl.TEXTURE_WRAP_T, t === undefined ? s : t);
     };
 
     this.setImage = function(args) {
