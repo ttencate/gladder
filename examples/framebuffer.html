@@ -84,30 +84,12 @@
 
       var transform = mat4.create();
 
-      // TODO get FBO to create these
-      var colorBuffer1 = new gla.Texture({
-        minFilter: gla.Texture.Filter.NEAREST,
-        magFilter: gla.Texture.Filter.NEAREST,
-        wrapS: gla.Texture.Wrap.CLAMP_TO_EDGE,
-        wrapT: gla.Texture.Wrap.CLAMP_TO_EDGE,
-        width: gla.canvas.width,
-        height: gla.canvas.height,
-      });
-      var colorBuffer2 = new gla.Texture({
-        minFilter: gla.Texture.Filter.NEAREST,
-        magFilter: gla.Texture.Filter.NEAREST,
-        wrapS: gla.Texture.Wrap.CLAMP_TO_EDGE,
-        wrapT: gla.Texture.Wrap.CLAMP_TO_EDGE,
-        width: gla.canvas.width,
-        height: gla.canvas.height,
-      });
-
       var framebuffer1 = new gla.Framebuffer({
-        colorBuffer: colorBuffer1,
+        colorBuffer: gla.CREATE_TEXTURE_2D,
       });
       framebuffer1.checkComplete();
       var framebuffer2 = new gla.Framebuffer({
-        colorBuffer: colorBuffer2,
+        colorBuffer: gla.CREATE_TEXTURE_2D,
       });
       framebuffer2.checkComplete();
 
@@ -143,7 +125,7 @@
 
         // Render the scene to the second framebuffer, vertically blurred
         framebuffer2.withBound(function() {
-          colorBuffer1.withBound(0, function() {
+          framebuffer1.colorBuffer.withBound(0, function() {
             gla.draw({
               program: blurProgram,
               uniforms: { sampler: 0, offset: [0, 1 / gla.canvas.height] },
@@ -156,7 +138,7 @@
 
         // Render the vertically blurred framebuffer to the screen, horizontally blurred
         // TODO auto-bind textures
-        colorBuffer2.withBound(0, function() {
+        framebuffer2.colorBuffer.withBound(0, function() {
           gla.draw({
             program: blurProgram,
             uniforms: { sampler: 0, offset: [1 / gla.canvas.width, 0] },

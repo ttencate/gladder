@@ -667,9 +667,14 @@ function Gladder(args) {
       colorBuffer: null,
       depthBuffer: null,
       stencilBuffer: null,
+      width: canvas.width,
+      height: canvas.height,
     });
 
     var glFramebuffer = gl.createFramebuffer();
+    this.colorBuffer = null;
+    this.depthBuffer = null;
+    this.stencilBuffer = null;
 
     this.withBound = function(func) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, glFramebuffer);
@@ -677,26 +682,39 @@ function Gladder(args) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, null); // TODO restore properly
     };
 
-    function attachBuffer(attachment, buffer) {
+    function attachBuffer(attachment, buffer, width, height) {
       this.withBound(function() {
+        if (buffer === gla.CREATE_TEXTURE_2D) {
+          buffer = new gla.Texture({
+            minFilter: gla.Texture.Filter.NEAREST,
+            magFilter: gla.Texture.Filter.NEAREST,
+            wrapS: gla.Texture.Wrap.CLAMP_TO_EDGE,
+            wrapT: gla.Texture.Wrap.CLAMP_TO_EDGE,
+            width: width,
+            height: height,
+          });
+        } else if (buffer === gla.CREATE_RENDERBUFFER) {
+          // TODO implement once we have renderbuffers
+        }
         if (buffer instanceof gla.Texture) {
           gl.framebufferTexture2D(gl.FRAMEBUFFER, attachment, gl.TEXTURE_2D, buffer._id, 0);
         } else if (buffer instanceof gla.RenderBuffer) {
           gl.framebufferRenderbuffer(gl.FRAMEBUFFER, attachment, gl.RENDERBUFFER, buffer._id);
         }
       });
+      return buffer;
     };
 
-    this.attachColorBuffer = function(colorBuffer) {
-      attachBuffer.call(this, gl.COLOR_ATTACHMENT0, colorBuffer);
+    this.attachColorBuffer = function(colorBuffer, width, height) {
+      this.colorBuffer = attachBuffer.call(this, gl.COLOR_ATTACHMENT0, colorBuffer, width, height);
     };
 
-    this.attachDepthBuffer = function(depthBuffer) {
-      attachBuffer.call(this, gl.DEPTH_ATTACHMENT, depthBuffer);
+    this.attachDepthBuffer = function(depthBuffer, width, height) {
+      this.depthBuffer = attachBuffer.call(this, gl.DEPTH_ATTACHMENT, depthBuffer, width, height);
     };
 
-    this.attachStencilBuffer = function(stencilBuffer) {
-      attachBuffer.call(this, gl.STENCIL_ATTACHMENT, stencilBuffer);
+    this.attachStencilBuffer = function(stencilBuffer, width, height) {
+      this.stencilBuffer = attachBuffer.call(this, gl.STENCIL_ATTACHMENT, stencilBuffer, width, height);
     };
 
     this.checkComplete = function() {
@@ -716,15 +734,18 @@ function Gladder(args) {
     };
 
     if (args.colorBuffer) {
-      this.attachColorBuffer(args.colorBuffer);
+      this.attachColorBuffer(args.colorBuffer, args.width, args.height);
     }
     if (args.depthBuffer) {
-      this.attachDepthBuffer(args.depthBuffer);
+      this.attachDepthBuffer(args.depthBuffer, args.width, args.height);
     }
     if (args.stencilBuffer) {
-      this.attachStencilBuffer(args.stencilBuffer);
+      this.attachStencilBuffer(args.stencilBuffer, args.width, args.height);
     }
   };
+
+  this.CREATE_TEXTURE_2D = new Object();
+  this.CREATE_RENDERBUFFER = new Object();
 
   /////////////
   // DRAWING //
