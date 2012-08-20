@@ -39,8 +39,7 @@
         // callCallback: function(msg) { console.info(msg); },
       });
 
-      gla.enableDepthTest();
-      gla.enableCullFace();
+      gla.enable(gla.Capability.DEPTH_TEST, gla.Capability.CULL_FACE);
 
       var program = new gla.Program({
         vertexShader: "vertex-shader",
@@ -92,7 +91,7 @@
           program: program,
           uniforms: { transform: transform },
           attributes: { position: buffer },
-          type: gla.draw.Mode.TRIANGLES,
+          type: gla.DrawMode.TRIANGLES,
           count: buffer.numItems,
         });
       });

@@ -149,7 +149,7 @@
               uniforms: { sampler: 0, offset: [0, 1 / gla.canvas.height] },
               attributes: { position: unitQuadBuffer },
               count: unitQuadBuffer.numItems,
-              mode: gla.draw.Mode.TRIANGLE_FAN,
+              mode: gla.DrawMode.TRIANGLE_FAN,
             });
           });
         });
@@ -162,7 +162,7 @@
             uniforms: { sampler: 0, offset: [1 / gla.canvas.width, 0] },
             attributes: { position: unitQuadBuffer },
             count: unitQuadBuffer.numItems,
-            mode: gla.draw.Mode.TRIANGLE_FAN,
+            mode: gla.DrawMode.TRIANGLE_FAN,
           });
         });
       });

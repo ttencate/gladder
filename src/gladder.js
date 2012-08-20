@@ -146,30 +146,44 @@ function Gladder(args) {
     gl.clear(bits);
   };
 
-  ////////////////
-  // STATE BITS //
-  ////////////////
-  
-  // TODO cache state bit values
-  function createStateBitFunc(funcName, bitName) {
-    gla["enable" + funcName] = function(enable) {
-      if (enable || enable === undefined) {
-        gl.enable(gl[bitName]);
-      } else {
-        gl.disable(gl[bitName]);
-      }
-    };
-    gla["disable" + funcName] = function() {
-      gl.disable(gl[bitName]);
-    };
-  }
+  //////////////////
+  // CAPABILITIES //
+  //////////////////
 
-  createStateBitFunc('Blend', 'BLEND');
-  createStateBitFunc('CullFace', 'CULL_FACE');
-  createStateBitFunc('DepthTest', 'DEPTH_TEST');
-  createStateBitFunc('Dither', 'DITHER');
-  createStateBitFunc('PolygonOffsetFill', 'POLYGON_OFFSET_FILL');
-  createStateBitFunc('StencilTest', 'STENCIL_TEST');
+  this.Capability = {
+    BLEND: gl.BLEND,
+    CULL_FACE: gl.CULL_FACE,
+    DEPTH_TEST: gl.DEPTH_TEST,
+    DITHER: gl.DITHER,
+    POLYGON_OFFSET_FILL: gl.POLYGON_OFFSET_FILL,
+    SAMPLE_ALPHA_TO_COVERAGE: gl.SAMPLE_ALPHA_TO_COVERAGE,
+    SAMPLE_COVERAGE: gl.SAMPLE_COVERAGE,
+    SCISSOR_TEST: gl.SCISSOR_TEST,
+    STENCIL_TEST: gl.STENCIL_TEST,
+  }
+  
+  var capabilityState = {};
+  capabilityState[this.Capability.DITHER] = true;
+
+  this.enable = function() {
+    for (var i = 0; i < arguments.length; ++i) {
+      var cap = arguments[i];
+      if (!capabilityState[cap]) {
+        gl.enable(arguments[i]);
+        capabilityState[cap] = true;
+      }
+    }
+  };
+
+  this.disable = function() {
+    for (var i = 0; i < arguments.length; ++i) {
+      var cap = arguments[i];
+      if (capabilityState[cap]) {
+        gl.disable(arguments[i]);
+        capabilityState[cap] = false;
+      }
+    }
+  };
 
   ///////////////
   // ANIMATION //
@@ -721,7 +735,7 @@ function Gladder(args) {
       program: REQUIRED,
       uniforms: {},
       attributes: {},
-      mode: gla.draw.Mode.TRIANGLES,
+      mode: gla.DrawMode.TRIANGLES,
       first: 0,
       count: REQUIRED,
     });
@@ -738,7 +752,7 @@ function Gladder(args) {
     gl.drawArrays(args.mode, args.first, args.count);
   };
 
-  this.draw.Mode = {
+  this.DrawMode = {
     POINTS: gl.POINTS,
     LINE_STRIP: gl.LINE_STRIP,
     LINE_LOOP: gl.LINE_LOOP,
