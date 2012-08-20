@@ -66,7 +66,7 @@
         canvas: "canvas",
         debug: true,
         errorCallback: function(err) { console.error(err); },
-        callCallback: function(msg) { console.info(msg); },
+        // callCallback: function(msg) { console.info(msg); },
       });
 
       gla.clear({ color: [0, 0, 0] });
@@ -88,12 +88,9 @@
       var framebuffer1 = new gla.Framebuffer({
         colorBuffer: gla.CREATE_TEXTURE_2D,
       });
-      // TODO move completeness check to draw func
-      framebuffer1.checkComplete();
       var framebuffer2 = new gla.Framebuffer({
         colorBuffer: gla.CREATE_TEXTURE_2D,
       });
-      framebuffer2.checkComplete();
 
       var blurProgram = new gla.Program({
         vertexShader: "blur-vertex-shader",
@@ -114,30 +111,29 @@
         mat4.rotate(transform, angle, [0, 0, 1]);
 
         // Render the triangle to the first framebuffer
-        framebuffer1.withBound(function() {
-          gla.clear({ color: [1, 1, 1] });
-
-          gla.draw({
-            program: triangleProgram,
-            uniforms: { transform: transform },
-            attributes: { position: triangleBuffer },
-            count: triangleBuffer.numItems,
-          });
+        gla.clear({
+          framebuffer: framebuffer1,
+          color: [1, 1, 1]
+        });
+        gla.draw({
+          framebuffer: framebuffer1,
+          program: triangleProgram,
+          uniforms: { transform: transform },
+          attributes: { position: triangleBuffer },
+          count: triangleBuffer.numItems,
         });
 
         // Render the scene to the second framebuffer, vertically blurred
-        framebuffer2.withBound(function() {
-          gla.draw({
-            program: blurProgram,
-            uniforms: { sampler: framebuffer1.colorBuffer, offset: [0, 1 / gla.canvas.height] },
-            attributes: { position: unitQuadBuffer },
-            count: unitQuadBuffer.numItems,
-            mode: gla.DrawMode.TRIANGLE_FAN,
-          });
+        gla.draw({
+          framebuffer: framebuffer2,
+          program: blurProgram,
+          uniforms: { sampler: framebuffer1.colorBuffer, offset: [0, 1 / gla.canvas.height] },
+          attributes: { position: unitQuadBuffer },
+          count: unitQuadBuffer.numItems,
+          mode: gla.DrawMode.TRIANGLE_FAN,
         });
 
         // Render the vertically blurred framebuffer to the screen, horizontally blurred
-        // TODO specify framebuffer as part of draw call
         gla.draw({
           program: blurProgram,
           uniforms: { sampler: framebuffer2.colorBuffer, offset: [1 / gla.canvas.width, 0] },
@@ -145,8 +141,6 @@
           count: unitQuadBuffer.numItems,
           mode: gla.DrawMode.TRIANGLE_FAN,
         });
-
-        if (angle > 0.01) gla.exitMainLoop();
       });
     </script>
   </body>

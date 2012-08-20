@@ -97,55 +97,6 @@ function Gladder(args) {
 
   this.canvas = canvas;
 
-  //////////////
-  // CLEARING //
-  //////////////
-
-  var clearColor = [0, 0, 0, 0];
-  var clearDepth = 1;
-  var clearStencil = 0;
-
-  this.clear = function(args) {
-    processArgs(args, {
-      color: null,
-      depth: null,
-      stencil: null,
-    });
-    var bits = 0;
-    if (args.color !== null) {
-      bits |= gl.COLOR_BUFFER_BIT;
-      var fullColor = [];
-      var colorChanged = false;
-      for (var i = 0; i <= 3; ++i) {
-        if (args.color[i] === undefined) {
-          fullColor[i] = fullColor[i-1];
-        } else {
-          fullColor[i] = args.color[i];
-        }
-        colorChanged = colorChanged || (fullColor[i] != clearColor[i]);
-      }
-      if (colorChanged) {
-        gl.clearColor(fullColor[0], fullColor[1], fullColor[2], fullColor[3]);
-        clearColor = fullColor;
-      }
-    }
-    if (args.depth !== null) {
-      bits |= gl.DEPTH_BUFFER_BIT;
-      if (args.depth != clearDepth) {
-        gl.clearDepth(args.depth);
-        clearDepth = args.depth;
-      }
-    }
-    if (args.stencil !== null) {
-      bits |= gl.STENCIL_BUFFER_BIT;
-      if (args.stencil != clearStencil) {
-        gl.clearStencil(args.stencil);
-        clearStencil = args.stencil;
-      }
-    }
-    gl.clear(bits);
-  };
-
   //////////////////
   // CAPABILITIES //
   //////////////////
@@ -278,7 +229,7 @@ function Gladder(args) {
       default: throw new Error("Unsupported buffer type " + args.type);
     };
 
-    // TODO create withBound function instead
+    // TODO pass target enum
     this.bindArray = function() {
       gl.bindBuffer(gl.ARRAY_BUFFER, glBuffer);
     };
@@ -677,6 +628,15 @@ function Gladder(args) {
   // FRAMEBUFFERS //
   //////////////////
 
+  var boundFramebuffer = null;
+
+  function bindFramebuffer(framebuffer) {
+    if (framebuffer !== boundFramebuffer) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer === null ? null : framebuffer._id);
+      boundFramebuffer = framebuffer;
+    }
+  }
+
   this.Framebuffer = function(args) {
     processArgs(args, {
       colorBuffer: null,
@@ -687,38 +647,33 @@ function Gladder(args) {
     });
 
     var glFramebuffer = gl.createFramebuffer();
+    this._id = glFramebuffer;
+
     this.colorBuffer = null;
     this.depthBuffer = null;
     this.stencilBuffer = null;
 
-    this.withBound = function(func) {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, glFramebuffer);
-      func();
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null); // TODO restore properly
-    };
-
     // TODO add delete() functions to this and other objects
 
     function attachBuffer(attachment, buffer, width, height) {
-      this.withBound(function() {
-        if (buffer === gla.CREATE_TEXTURE_2D) {
-          buffer = new gla.Texture({
-            minFilter: gla.Texture.Filter.NEAREST,
-            magFilter: gla.Texture.Filter.NEAREST,
-            wrapS: gla.Texture.Wrap.CLAMP_TO_EDGE,
-            wrapT: gla.Texture.Wrap.CLAMP_TO_EDGE,
-            width: width,
-            height: height,
-          });
-        } else if (buffer === gla.CREATE_RENDERBUFFER) {
-          // TODO implement once we have renderbuffers
-        }
-        if (buffer instanceof gla.Texture) {
-          gl.framebufferTexture2D(gl.FRAMEBUFFER, attachment, gl.TEXTURE_2D, buffer._id, 0);
-        } else if (buffer instanceof gla.RenderBuffer) {
-          gl.framebufferRenderbuffer(gl.FRAMEBUFFER, attachment, gl.RENDERBUFFER, buffer._id);
-        }
-      });
+      bindFramebuffer(this);
+      if (buffer === gla.CREATE_TEXTURE_2D) {
+        buffer = new gla.Texture({
+          minFilter: gla.Texture.Filter.NEAREST,
+          magFilter: gla.Texture.Filter.NEAREST,
+          wrapS: gla.Texture.Wrap.CLAMP_TO_EDGE,
+          wrapT: gla.Texture.Wrap.CLAMP_TO_EDGE,
+          width: width,
+          height: height,
+        });
+      } else if (buffer === gla.CREATE_RENDERBUFFER) {
+        // TODO implement once we have renderbuffers
+      }
+      if (buffer instanceof gla.Texture) {
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, attachment, gl.TEXTURE_2D, buffer._id, 0);
+      } else if (buffer instanceof gla.RenderBuffer) {
+        gl.framebufferRenderbuffer(gl.FRAMEBUFFER, attachment, gl.RENDERBUFFER, buffer._id);
+      }
       return buffer;
     };
 
@@ -735,19 +690,18 @@ function Gladder(args) {
     };
 
     this.checkComplete = function() {
-      this.withBound(function() {
-        var framebufferStatus = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-        if (framebufferStatus !== gl.FRAMEBUFFER_COMPLETE) {
-          var textStatus = framebufferStatus;
-          switch (framebufferStatus) {
-            case gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT: textStatus = "INCOMPLETE_ATTACHMENT"; break;
-            case gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT: textStatus = "INCOMPLETE_MISSING_ATTACHMENT"; break;
-            case gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS: textStatus = "INCOMPLETE_DIMENSIONS"; break;
-            case gl.FRAMEBUFFER_UNSUPPORTED: textStatus = "UNSUPPORTED"; break;
-          };
-          throw new Error("Framebuffer incomplete: " + textStatus);
-        }
-      });
+      bindFramebuffer(this);
+      var framebufferStatus = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+      if (framebufferStatus !== gl.FRAMEBUFFER_COMPLETE) {
+        var textStatus = framebufferStatus;
+        switch (framebufferStatus) {
+          case gl.FRAMEBUFFER_INCOMPLETE_ATTACHMENT: textStatus = "INCOMPLETE_ATTACHMENT"; break;
+          case gl.FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT: textStatus = "INCOMPLETE_MISSING_ATTACHMENT"; break;
+          case gl.FRAMEBUFFER_INCOMPLETE_DIMENSIONS: textStatus = "INCOMPLETE_DIMENSIONS"; break;
+          case gl.FRAMEBUFFER_UNSUPPORTED: textStatus = "UNSUPPORTED"; break;
+        };
+        throw new Error("Framebuffer incomplete: " + textStatus);
+      }
     };
 
     if (args.colorBuffer) {
@@ -764,6 +718,59 @@ function Gladder(args) {
   this.CREATE_TEXTURE_2D = new Object();
   this.CREATE_RENDERBUFFER = new Object();
 
+  //////////////
+  // CLEARING //
+  //////////////
+
+  var clearColor = [0, 0, 0, 0];
+  var clearDepth = 1;
+  var clearStencil = 0;
+
+  this.clear = function(args) {
+    processArgs(args, {
+      color: null,
+      depth: null,
+      stencil: null,
+      framebuffer: null,
+    });
+
+    bindFramebuffer(args.framebuffer);
+
+    var bits = 0;
+    if (args.color !== null) {
+      bits |= gl.COLOR_BUFFER_BIT;
+      var fullColor = [];
+      var colorChanged = false;
+      for (var i = 0; i <= 3; ++i) {
+        if (args.color[i] === undefined) {
+          fullColor[i] = fullColor[i-1];
+        } else {
+          fullColor[i] = args.color[i];
+        }
+        colorChanged = colorChanged || (fullColor[i] != clearColor[i]);
+      }
+      if (colorChanged) {
+        gl.clearColor(fullColor[0], fullColor[1], fullColor[2], fullColor[3]);
+        clearColor = fullColor;
+      }
+    }
+    if (args.depth !== null) {
+      bits |= gl.DEPTH_BUFFER_BIT;
+      if (args.depth != clearDepth) {
+        gl.clearDepth(args.depth);
+        clearDepth = args.depth;
+      }
+    }
+    if (args.stencil !== null) {
+      bits |= gl.STENCIL_BUFFER_BIT;
+      if (args.stencil != clearStencil) {
+        gl.clearStencil(args.stencil);
+        clearStencil = args.stencil;
+      }
+    }
+    gl.clear(bits);
+  };
+
   /////////////
   // DRAWING //
   /////////////
@@ -776,10 +783,17 @@ function Gladder(args) {
       mode: gla.DrawMode.TRIANGLES,
       first: 0,
       count: REQUIRED,
+      framebuffer: null,
     });
 
     var program = args.program;
     program.use();
+
+    var framebuffer = args.framebuffer;
+    bindFramebuffer(framebuffer);
+    if (framebuffer !== null) {
+      framebuffer.checkComplete();
+    }
 
     var currentTextureUnit = {};
     for (var key in args.uniforms) {
@@ -789,6 +803,8 @@ function Gladder(args) {
       switch (type) {
         case "sampler2D":
         case "samplerRect":
+          // XXX There is room for optimization here: if the texture is already bound
+          // to another texture unit, just use that one.
           var target = { sampler2D: gl.TEXTURE_2D, samplerCube: gl.TEXTURE_CUBE_MAP }[type];
           var current = currentTextureUnit[target] || 0;
           textureUnits[current].bind(target, value);
