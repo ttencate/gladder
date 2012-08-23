@@ -73,8 +73,8 @@
       });
 
       var triangleBuffer = new gla.Buffer({
-        data: [ 0,3, -1.5*Math.sqrt(3),-1.5, 1.5*Math.sqrt(3),-1.5 ],
-        componentsPerItem: 2,
+        data: new Float32Array([ 0,3, -1.5*Math.sqrt(3),-1.5, 1.5*Math.sqrt(3),-1.5 ]),
+        views: { position: { size: 2, type: gla.Buffer.Type.FLOAT } },
       });
 
       var transform = mat4.create();
@@ -96,8 +96,8 @@
       });
 
       var unitQuadBuffer = new gla.Buffer({
-        data: [ 0,0, 1,0, 1,1, 0,1 ],
-        componentsPerItem: 2,
+        data: new Float32Array([ 0,0, 1,0, 1,1, 0,1 ]),
+        views: { position: { size: 2, type: gla.Buffer.Type.FLOAT } },
       });
 
       var angle = 0;
@@ -115,8 +115,8 @@
           framebuffer: framebuffer1,
           program: triangleProgram,
           uniforms: { transform: transform },
-          attributes: { position: triangleBuffer },
-          count: triangleBuffer.numItems,
+          attributes: { position: triangleBuffer.views.position },
+          count: triangleBuffer.views.position.numItems(),
         });
 
         // Render the scene to the second framebuffer, vertically blurred
@@ -124,8 +124,8 @@
           framebuffer: framebuffer2,
           program: blurProgram,
           uniforms: { sampler: framebuffer1.colorBuffer, step: [0, 1 / gla.canvas.height] },
-          attributes: { position: unitQuadBuffer },
-          count: unitQuadBuffer.numItems,
+          attributes: { position: unitQuadBuffer.views.position },
+          count: unitQuadBuffer.views.position.numItems(),
           mode: gla.DrawMode.TRIANGLE_FAN,
         });
 
@@ -133,8 +133,8 @@
         gla.draw({
           program: blurProgram,
           uniforms: { sampler: framebuffer2.colorBuffer, step: [1 / gla.canvas.width, 0] },
-          attributes: { position: unitQuadBuffer },
-          count: unitQuadBuffer.numItems,
+          attributes: { position: unitQuadBuffer.views.position },
+          count: unitQuadBuffer.views.position.numItems(),
           mode: gla.DrawMode.TRIANGLE_FAN,
         });
       });

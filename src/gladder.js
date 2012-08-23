@@ -182,6 +182,9 @@ function Gladder(args) {
   //////////////
   // VIEWPORT //
   //////////////
+
+  // TODO make this part of draw() arguments, with full as default
+  // TODO cache viewport
   
   this.viewport = {};
 
@@ -197,52 +200,156 @@ function Gladder(args) {
   // BUFFERS //
   /////////////
   
-  this.Buffer = function Buffer(args) {
+  // TODO currently unused, remove if unneeded
+  function getGLBufferType(arrayBufferViewType) {
+    switch (arrayBufferViewType) {
+      case Int8Array: return gl.BYTE;
+      case Uint8Array: return gl.UNSIGNED_BYTE;
+      case Int16Array: return gl.SHORT;
+      case Uint16Array: return gl.UNSIGNED_SHORT;
+      case Int32Array: return gl.FIXED;
+      case Uint32Array: return gl.FIXED; // XXX Not quite accurate
+      case Float32Array: return gl.FLOAT;
+      default: throw new Error("Unsupported buffer type " + args.type);
+    };
+  }
+
+  function sizeOfType(type) {
+    switch (type) {
+      case gla.Buffer.Type.BYTE:
+      case gla.Buffer.Type.UNSIGNED_BYTE:
+        return 1;
+      case gla.Buffer.Type.SHORT:
+      case gla.Buffer.Type.UNSIGNED_SHORT:
+        return 2;
+      case gla.Buffer.Type.FIXED:
+      case gla.Buffer.Type.FLOAT:
+        return 4;
+      default:
+        throw new Error("Unknown type " + type);
+    }
+  }
+
+  this.BufferView = function(buffer, args) {
     processArgs(args, {
-      data: REQUIRED,
-      componentsPerItem: REQUIRED,
-      type: Float32Array,
+      size: REQUIRED,
+      type: REQUIRED,
       normalized: false,
       stride: 0,
+      offset: 0,
+    });
+
+    this.buffer = buffer;
+    this.size = args.size;
+    this.type = args.type;
+    this.normalized = args.normalized;
+    this.stride = args.stride;
+    this.offset = args.offset;
+
+    this.numValues = function() {
+      if (this.stride > 0) {
+        return this.buffer.numBytes / this.stride * this.size;
+      } else {
+        return this.buffer.numBytes / sizeOfType(this.type);
+      }
+    };
+
+    this.numItems = function() {
+      if (this.stride > 0) {
+        return this.buffer.numBytes / this.stride;
+      } else {
+        return this.buffer.numBytes / (sizeOfType(this.type) * this.size);
+      }
+    };
+  };
+
+  this.Buffer = function Buffer(args) {
+    processArgs(args, {
+      target: Buffer.Target.ARRAY_BUFFER,
+      data: null,
+      size: null,
       usage: Buffer.Usage.STATIC_DRAW,
+      views: {},
     });
 
     var glBuffer = gl.createBuffer();
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, glBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new args.type(args.data), args.usage);
+    this.target = args.target;
+    this.usage = args.usage;
+    this.numBytes = null;
 
-    this.componentsPerItem = args.componentsPerItem;
-    this.numItems = args.data.length / args.componentsPerItem;
-    this.normalized = args.normalized;
-    this.stride = args.stride;
-    this.type = args.type;
-    this.glType = null;
-    switch (args.type) {
-      case Int8Array: this.glType = gl.BYTE; break;
-      case Int16Array: this.glType = gl.SHORT; break;
-      case Int32Array: this.glType = gl.FIXED; break;
-      case Uint8Array: this.glType = gl.UNSIGNED_BYTE; break;
-      case Uint16Array: this.glType = gl.UNSIGNED_SHORT; break;
-      case Uint32Array: this.glType = gl.FIXED; break; // XXX Not quite accurate
-      case Float32Array: this.glType = gl.FLOAT; break;
-      default: throw new Error("Unsupported buffer type " + args.type);
+    this.bind = function() {
+      // TODO cache bound buffer
+      gl.bindBuffer(this.target, glBuffer);
     };
 
-    // TODO pass target enum
-    this.bindArray = function() {
-      gl.bindBuffer(gl.ARRAY_BUFFER, glBuffer);
+    this.set = function(args) {
+      processArgs(args, {
+        data: null,
+        size: null,
+        offset: null,
+        usage: this.usage,
+      });
+      this.bind();
+      if (args.offset === null) {
+        if (!(args.data === null ^ args.size === null)) {
+          throw new Error("Must set exactly one of data and size");
+        }
+        if (args.data !== null) {
+          gl.bufferData(this.target, args.data, args.usage);
+          this.numBytes = args.data.byteLength;
+        } else {
+          gl.bufferData(this.target, args.size, args.usage);
+          this.numBytes = args.size;
+        }
+      } else {
+        if (args.usage !== null) {
+          throw new Error("Cannot set usage and offset at the same time");
+        }
+        gl.bufferSubData(this.target, args.offset, args.data);
+      }
+      this.usage = args.usage;
     };
 
-    this.bindElementArray = function() {
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glBuffer);
+    this.addView = function(name, args) {
+      this.views[name] = new gla.BufferView(this, args);
     };
+
+    this.removeView = function(name) {
+      delete this.views[name];
+    };
+
+    this.set({ data: args.data, size: args.size, usage: this.usage });
+
+    function createViews(argsViews) {
+      var views = {};
+      for (var key in argsViews) {
+        if (!argsViews.hasOwnProperty(key)) continue;
+        views[key] = new gla.BufferView(this, argsViews[key]);
+      }
+      return views;
+    }
+    this.views = createViews.call(this, args.views);
+  };
+
+  this.Buffer.Target = {
+    ARRAY_BUFFER: gl.ARRAY_BUFFER,
+    ELEMENT_ARRAY_BUFFER: gl.ELEMENT_ARRAY_BUFFER,
   };
 
   this.Buffer.Usage = {
     DYNAMIC_DRAW: gl.DYNAMIC_DRAW,
     STATIC_DRAW: gl.STATIC_DRAW,
     STREAM_DRAW: gl.STREAM_DRAW,
+  };
+
+  this.Buffer.Type = {
+    BYTE: gl.BYTE,
+    UNSIGNED_BYTE: gl.UNSIGNED_BYTE,
+    SHORT: gl.SHORT,
+    UNSIGNED_SHORT: gl.UNSIGNED_SHORT,
+    FIXED: gl.FIXED,
+    FLOAT: gl.FLOAT,
   };
 
   /////////////
@@ -387,13 +494,13 @@ function Gladder(args) {
         // Received an array
         enableArray(false);
         vSetter.apply(gl, args);
-      } else if (args[1] instanceof gla.Buffer) {
+      } else if (args[1] instanceof gla.BufferView) {
         // Received a buffer
-        var buffer = args[1];
-        buffer.bindArray();
+        // TODO check it's of type ARRAY_BUFFER
+        var bufferView = args[1];
+        bufferView.buffer.bind();
         enableArray(true);
-        var type = null;
-        gl.vertexAttribPointer(glAttribute, buffer.componentsPerItem, buffer.glType, buffer.normalized, buffer.stride, 0);
+        gl.vertexAttribPointer(glAttribute, bufferView.size, bufferView.type, bufferView.normalized, bufferView.stride, bufferView.offset);
       } else if (setter !== null) {
         // Received some scalars
         enableArray(false);

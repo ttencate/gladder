@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Gladder : Buffer example</title>
+    <script src="../src/gl-matrix.js"></script>
+    <script src="../src/webgl-debug.js"></script>
+    <script src="../src/gladder.js"></script>
+  </head>
+  <body>
+    <h1>Gladder : Buffer example</h1>
+    <p>This shows how to update the contents of a buffer.</p>
+
+    <canvas id="canvas" width="640" height="640"></canvas>
+
+    <script id="vertex-shader" type="x-shader/x-vertex">
+      attribute vec2 position;
+      attribute vec3 color;
+      varying vec3 col;
+      void main() {
+        gl_Position = vec4(position, 0.0, 1.0);
+        col = color;
+      }
+    </script>
+
+    <script id="fragment-shader" type="x-shader/x-fragment">
+      precision mediump float;
+      varying vec3 col;
+      void main() {
+        gl_FragColor = vec4(col, 1.0);
+      }
+    </script>
+
+    <script>
+      var gla = new Gladder({
+        canvas: "canvas",
+        debug: true,
+        errorCallback: function(err) { console.error(err); gla.exitMainLoop(); },
+        // callCallback: function(msg) { console.info(msg); },
+      });
+
+      var program = new gla.Program({
+        vertexShader: "vertex-shader",
+        fragmentShader: "fragment-shader",
+        attributes: { position: "vec2", color: "vec3" },
+      });
+
+      var numPoints = 4;
+      var data = new Float32Array(numPoints * (2 + 3)); // interleaved: x, y, r, g, b
+      var speed = new Float32Array(numPoints * 2);
+      for (var i = 0; i < numPoints; ++i) {
+        data[5*i    ] = 2.0 * Math.random() - 1.0;
+        data[5*i + 1] = 2.0 * Math.random() - 1.0;
+        data[5*i + 2] = Math.random();
+        data[5*i + 3] = Math.random();
+        data[5*i + 4] = Math.random();
+        speed[2*i    ] = 0.001 * (2.0 * Math.random() - 1.0);
+        speed[2*i + 1] = 0.001 * (2.0 * Math.random() - 1.0);
+      }
+
+      var buffer = new gla.Buffer({
+        data: data,
+        usage: gla.Buffer.Usage.DYNAMIC_DRAW,
+        views: {
+          position: { size: 2, type: gla.Buffer.Type.FLOAT, stride: 5 * 4 },
+          color: { size: 3, type: gla.Buffer.Type.FLOAT, stride: 5 * 4, offset: 2 * 4 },
+        },
+      });
+
+      gla.mainLoop(function(delta) {
+        for (var i = 0; i < numPoints; ++i) {
+          for (var j = 0; j < 2; ++j) {
+            var dataIndex = 5*i + j;
+            var speedIndex = 2*i + j;
+            data[5*i + j] += delta * speed[2*i + j];
+            if (data[dataIndex] > 1) {
+              speed[speedIndex] = -speed[speedIndex];
+              data[dataIndex] = 2 - data[dataIndex];
+            } else if (data[dataIndex] < -1) {
+              speed[speedIndex] = -speed[speedIndex];
+              data[dataIndex] = -2 - data[dataIndex];
+            }
+          }
+        }
+        buffer.set({ data: data });
+
+        gla.clear({ color: [1, 1, 1] });
+
+        gla.draw({
+          program: program,
+          attributes: { position: buffer.views.position, color: buffer.views.color },
+          mode: gla.DrawMode.LINE_LOOP,
+          count: buffer.views.position.numItems(),
+        });
+      });
+    </script>
+  </body>
+</html>
+
