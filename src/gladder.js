@@ -1,3 +1,4 @@
+// TODO add JSDoc to all public methods
 /**
  * args can contain:
  * canvas: canvas DOM node, or id of one (required)
@@ -33,7 +34,7 @@ function Gladder(args) {
   var REQUIRED = new Object();
 
   function processArgs(args, defaultArgs) {
-    // TODO check enum values on request
+    // TODO check enum values when a particular flag (debug?) is enabled
     for (var key in defaultArgs) {
       if (!defaultArgs.hasOwnProperty(key)) continue;
       if (!args.hasOwnProperty(key) || args[key] === undefined) {
@@ -151,16 +152,18 @@ function Gladder(args) {
   this.requestAnimationFrame = function(callback) {
     REQUEST_ANIMATION_FRAME.call(window, callback, canvas);
   };
+  
+  var mainLoopExiting = null;
 
   this.mainLoop = function(callback) {
-    this.mainLoop.exit = false;
+    mainLoopExiting = false;
     var last = Date.now();
     var drawFrame = function() {
       var now = Date.now();
       var delta = Math.max(0, now - last);
       last = now;
       callback(delta);
-      if (!gla.mainLoop.exit) {
+      if (!mainLoopExiting) {
         gla.requestAnimationFrame(drawFrame, gla.canvas);
       }
     }
@@ -168,7 +171,7 @@ function Gladder(args) {
   };
 
   this.exitMainLoop = function() {
-    this.mainLoop.exit = true;
+    mainLoopExiting = true;
   };
 
   this.flush = function() {
@@ -238,6 +241,9 @@ function Gladder(args) {
       stride: 0,
       offset: 0,
     });
+    // TODO check args sanity:
+    // - stride <= item size, or 0
+    // - stride and offset multiple of value size
 
     this.buffer = buffer;
     this.size = args.size;
@@ -284,6 +290,7 @@ function Gladder(args) {
     };
 
     this.set = function(args) {
+      // TODO accept data in the form of JS array (convert to Float32Array) and use it in examples
       processArgs(args, {
         data: null,
         size: null,
@@ -319,7 +326,9 @@ function Gladder(args) {
       delete this.views[name];
     };
 
-    this.set({ data: args.data, size: args.size, usage: this.usage });
+    if (args.data !== null || args.size !== null) {
+      this.set({ data: args.data, size: args.size, usage: this.usage });
+    }
 
     function createViews(argsViews) {
       var views = {};
