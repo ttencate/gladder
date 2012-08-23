@@ -15,19 +15,15 @@
     <script id="vertex-shader" type="x-shader/x-vertex">
       uniform mat4 transform;
       attribute vec3 position;
-      varying vec3 pos;
       void main() {
         gl_Position = transform * vec4(position, 1.0);
-        pos = position;
       }
     </script>
 
     <script id="fragment-shader" type="x-shader/x-fragment">
       precision mediump float;
-      varying vec3 pos;
       void main() {
-        gl_FragColor.rgb = pow(1.0 - abs(pos.rgb), vec3(3.0));
-        gl_FragColor.a = 1.0;
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
       }
     </script>
 
@@ -39,8 +35,6 @@
         // callCallback: function(msg) { console.info(msg); },
       });
 
-      gla.enable(gla.Capability.DEPTH_TEST, gla.Capability.CULL_FACE);
-
       var program = new gla.Program({
         vertexShader: "vertex-shader",
         fragmentShader: "fragment-shader",
@@ -49,12 +43,9 @@
       });
 
       var cubeData = [
-        -1,-1,-1, -1,+1,-1, +1,+1,-1, -1,-1,-1, +1,+1,-1, +1,-1,-1, // x=-1 face
-        -1,-1,+1, +1,-1,+1, +1,+1,+1, -1,-1,+1, +1,+1,+1, -1,+1,+1, // x=+1 face
-        -1,-1,-1, +1,-1,-1, +1,-1,+1, -1,-1,-1, +1,-1,+1, -1,-1,+1, // y=-1 face
-        -1,+1,-1, -1,+1,+1, +1,+1,+1, -1,+1,-1, +1,+1,+1, +1,+1,-1, // y=+1 face
-        -1,-1,-1, -1,-1,+1, -1,+1,+1, -1,-1,-1, -1,+1,+1, -1,+1,-1, // z=-1 face
-        +1,-1,-1, +1,+1,-1, +1,+1,+1, +1,-1,-1, +1,+1,+1, +1,-1,+1, // z=+1 face
+        -1,-1,-1, -1,-1,+1, -1,+1,-1, -1,+1,+1, +1,-1,-1, +1,-1,+1, +1,+1,-1, +1,+1,+1, // x direction
+        -1,-1,-1, -1,+1,-1, -1,-1,+1, -1,+1,+1, +1,-1,-1, +1,+1,-1, +1,-1,+1, +1,+1,+1, // y direction
+        -1,-1,-1, +1,-1,-1, -1,-1,+1, +1,-1,+1, -1,+1,-1, +1,+1,-1, -1,+1,+1, +1,+1,+1, // z direction
       ];
 
       var buffer = new gla.Buffer({
@@ -75,7 +66,7 @@
       var transform = mat4.create();
 
       gla.mainLoop(function(delta) {
-        gla.clear({ color: [1, 1, 1], depth: 1 });
+        gla.clear({ color: [1, 1, 1] });
 
         mat4.rotate(modelMatrix, 0.0008 * delta, [1, 0, 0]);
         mat4.rotate(modelMatrix, 0.0005 * delta, [0, 1, 0]);
@@ -90,7 +81,7 @@
           program: program,
           uniforms: { transform: transform },
           attributes: { position: buffer },
-          type: gla.DrawMode.TRIANGLES,
+          mode: gla.DrawMode.LINES,
           count: buffer.numItems,
         });
       });
