@@ -283,6 +283,8 @@ function Gladder(args) {
     };
   };
 
+  var boundBuffer = {};
+
   this.Buffer = function Buffer(args) {
     processArgs(args, {
       target: Buffer.Target.ARRAY_BUFFER,
@@ -299,8 +301,10 @@ function Gladder(args) {
     this.numBytes = null;
 
     this.bind = function() {
-      // TODO cache bound buffer
-      gl.bindBuffer(this.target, glBuffer);
+      if (boundBuffer[this.target] !== this) {
+        gl.bindBuffer(this.target, glBuffer);
+        boundBuffer[this.target] = this;
+      }
     };
 
     this.set = function(args) {
