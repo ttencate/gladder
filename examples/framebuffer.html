@@ -73,8 +73,8 @@
       });
 
       var triangleBuffer = new gla.Buffer({
-        data: new Float32Array([ 0,3, -1.5*Math.sqrt(3),-1.5, 1.5*Math.sqrt(3),-1.5 ]),
-        views: { position: { size: 2, type: gla.Buffer.Type.FLOAT } },
+        data: [ 0,3, -1.5*Math.sqrt(3),-1.5, 1.5*Math.sqrt(3),-1.5 ],
+        views: { position: { size: 2 } },
       });
 
       var transform = mat4.create();
@@ -96,8 +96,8 @@
       });
 
       var unitQuadBuffer = new gla.Buffer({
-        data: new Float32Array([ 0,0, 1,0, 1,1, 0,1 ]),
-        views: { position: { size: 2, type: gla.Buffer.Type.FLOAT } },
+        data: [ 0,0, 1,0, 1,1, 0,1 ],
+        views: { position: { size: 2 } },
       });
 
       var angle = 0;

@@ -42,16 +42,16 @@
         attributes: { position: "vec3" },
       });
 
-      var cubeData = new Float32Array([
+      var cubeData = [
         -1,-1,-1, -1,-1,+1, -1,+1,-1, -1,+1,+1, +1,-1,-1, +1,-1,+1, +1,+1,-1, +1,+1,+1, // x direction
         -1,-1,-1, -1,+1,-1, -1,-1,+1, -1,+1,+1, +1,-1,-1, +1,+1,-1, +1,-1,+1, +1,+1,+1, // y direction
         -1,-1,-1, +1,-1,-1, -1,-1,+1, +1,-1,+1, -1,+1,-1, +1,+1,-1, -1,+1,+1, +1,+1,+1, // z direction
-      ]);
+      ];
 
       var buffer = new gla.Buffer({
         data: cubeData,
         views: {
-          position: { size: 3, type: gla.Buffer.Type.FLOAT },
+          position: { size: 3 },
         }
       });
 

@@ -20,6 +20,10 @@ function Gladder(args) {
     return Object.prototype.toString.call(x) == '[object String]';
   }
 
+  function isArray(x) {
+    return Object.prototype.toString.call(x) === '[object Array]';
+  }
+
   function getElement(element) {
     if (element === null) {
       throw new Error("Element is null");
@@ -250,7 +254,7 @@ function Gladder(args) {
   this.BufferView = function(buffer, args) {
     processArgs(args, {
       size: REQUIRED,
-      type: REQUIRED,
+      type: gla.Buffer.Type.FLOAT,
       normalized: false,
       stride: 0,
       offset: 0,
@@ -308,7 +312,6 @@ function Gladder(args) {
     };
 
     this.set = function(args) {
-      // TODO accept data in the form of JS array (convert to Float32Array) and use it in examples
       processArgs(args, {
         data: null,
         size: null,
@@ -321,8 +324,12 @@ function Gladder(args) {
           throw new Error("Must set exactly one of data and size");
         }
         if (args.data !== null) {
-          gl.bufferData(this.target, args.data, args.usage);
-          this.numBytes = args.data.byteLength;
+          var data = args.data;
+          if (isArray(data)) {
+            data = new Float32Array(data);
+          }
+          gl.bufferData(this.target, data, args.usage);
+          this.numBytes = data.byteLength;
         } else {
           gl.bufferData(this.target, args.size, args.usage);
           this.numBytes = args.size;

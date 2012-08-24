@@ -47,22 +47,24 @@
       var numPoints = 4;
       var data = new Float32Array(numPoints * (2 + 3)); // interleaved: x, y, r, g, b
       var speed = new Float32Array(numPoints * 2);
-      for (var i = 0; i < numPoints; ++i) {
-        data[5*i    ] = 2.0 * Math.random() - 1.0;
-        data[5*i + 1] = 2.0 * Math.random() - 1.0;
-        data[5*i + 2] = Math.random();
-        data[5*i + 3] = Math.random();
-        data[5*i + 4] = Math.random();
-        speed[2*i    ] = 0.001 * (2.0 * Math.random() - 1.0);
-        speed[2*i + 1] = 0.001 * (2.0 * Math.random() - 1.0);
+      var i = 0;
+      var j = 0;
+      for (var p = 0; p < numPoints; ++p) {
+        data[i++] = 2.0 * Math.random() - 1.0;
+        data[i++] = 2.0 * Math.random() - 1.0;
+        data[i++] = Math.random();
+        data[i++] = Math.random();
+        data[i++] = Math.random();
+        speed[j++] = 0.001 * (2.0 * Math.random() - 1.0);
+        speed[j++] = 0.001 * (2.0 * Math.random() - 1.0);
       }
 
       var buffer = new gla.Buffer({
         data: data,
         usage: gla.Buffer.Usage.DYNAMIC_DRAW,
         views: {
-          position: { size: 2, type: gla.Buffer.Type.FLOAT, stride: 5 * 4 },
-          color: { size: 3, type: gla.Buffer.Type.FLOAT, stride: 5 * 4, offset: 2 * 4 },
+          position: { size: 2, stride: 5 * 4 },
+          color: { size: 3, stride: 5 * 4, offset: 2 * 4 },
         },
       });
 
