@@ -8,7 +8,6 @@
  */
 function Gladder(args) {
 
-  var canvas;
   var gl;
   var gla = this;
 
@@ -62,6 +61,7 @@ function Gladder(args) {
   // CONTEXT //
   /////////////
 
+  // TODO implement WebGLContextAttributes (alpha, etc.)
   processArgs(args, {
     canvas: REQUIRED,
     debug: false,
@@ -83,8 +83,7 @@ function Gladder(args) {
     return gl;
   }
 
-  canvas = getElement(args.canvas);
-  gl = getGl(canvas);
+  gl = getGl(getElement(args.canvas));
 
   if (args.debug) {
     if (WebGLDebugUtils === undefined) {
@@ -108,7 +107,7 @@ function Gladder(args) {
     gl = WebGLDebugUtils.makeDebugContext(gl, onError, onCall);
   }
 
-  this.canvas = canvas;
+  this.canvas = gl.canvas;
 
   //////////////////
   // CAPABILITIES //
@@ -162,7 +161,7 @@ function Gladder(args) {
     function(callback, element) { window.setTimeout(callback, 1000/60); };
 
   this.requestAnimationFrame = function(callback) {
-    REQUEST_ANIMATION_FRAME.call(window, callback, canvas);
+    REQUEST_ANIMATION_FRAME.call(window, callback, gl.canvas);
   };
   
   var mainLoopExiting = null;
@@ -176,10 +175,10 @@ function Gladder(args) {
       last = now;
       callback(delta);
       if (!mainLoopExiting) {
-        gla.requestAnimationFrame(drawFrame, gla.canvas);
+        gla.requestAnimationFrame(drawFrame, gl.canvas);
       }
     }
-    this.requestAnimationFrame(drawFrame, canvas);
+    this.requestAnimationFrame(drawFrame, gl.canvas);
   };
 
   this.exitMainLoop = function() {
@@ -201,16 +200,16 @@ function Gladder(args) {
   var viewport = {
     x: 0,
     y: 0,
-    width: canvas.width,
-    height: canvas.height,
+    width: gl.canvas.width,
+    height: gl.canvas.height,
   };
 
   function setViewport(args) {
     processArgs(args, {
       x: 0,
       y: 0,
-      width: canvas.width,
-      height: canvas.height,
+      width: gl.canvas.width,
+      height: gl.canvas.height,
     });
     if (viewport.x !== args.x || viewport.y !== args.y || viewport.width !== args.width || viewport.height !== args.height) {
       gl.viewport(x, y, width, height);
@@ -823,8 +822,8 @@ function Gladder(args) {
       colorBuffer: null,
       depthBuffer: null,
       stencilBuffer: null,
-      width: canvas.width,
-      height: canvas.height,
+      width: gl.canvas.width,
+      height: gl.canvas.height,
     });
 
     var glFramebuffer = gl.createFramebuffer();
@@ -965,7 +964,7 @@ function Gladder(args) {
       first: 0,
       count: REQUIRED,
       framebuffer: null,
-      viewport: { x: 0, y: 0, width: canvas.width, height: canvas.height },
+      viewport: { x: 0, y: 0, width: gl.canvas.width, height: gl.canvas.height },
     });
 
     var framebuffer = args.framebuffer;
