@@ -16,6 +16,10 @@ function Gladder(args) {
   // UTILITIES //
   ///////////////
 
+  function isString(x) {
+    return Object.prototype.toString.call(x) == '[object String]';
+  }
+
   function getElement(element) {
     if (element === null) {
       throw new Error("Element is null");
@@ -330,6 +334,7 @@ function Gladder(args) {
       this.set({ data: args.data, size: args.size, usage: this.usage });
     }
 
+    // TODO if we were passed typed data, infer view type if not set
     function createViews(argsViews) {
       var views = {};
       for (var key in argsViews) {
@@ -506,6 +511,7 @@ function Gladder(args) {
       } else if (args[1] instanceof gla.BufferView) {
         // Received a buffer
         // TODO check it's of type ARRAY_BUFFER
+        // TODO allow passing a Buffer if it has only one view
         var bufferView = args[1];
         bufferView.buffer.bind();
         enableArray(true);
@@ -674,29 +680,51 @@ function Gladder(args) {
 
     this.setImage = function(args) {
       processArgs(args, {
-        // TODO accept HTML images/videos/...
-        // TODO allow loading from URL
-        width: REQUIRED,
-        height: REQUIRED,
+        width: null,
+        height: null,
         target: gla.Texture.Target.TEXTURE_2D,
         level: 0,
         format: gla.Texture.Format.RGBA,
         type: gla.Texture.Type.UNSIGNED_BYTE,
-        pixels: null,
+        image: null,
+        generateMipmap: false,
       });
-      bind.call(this);
-      gl.texImage2D(args.target, args.level, args.format, args.width, args.height, 0, args.format, args.type, args.pixels);
+      if (args.image !== null) {
+        if (isString(args.image)) {
+          var image = new Image();
+          var self = this;
+          image.onload = function() {
+            self.setImage({ target: args.target, level: args.level, format: args.format, type: args.type, image: image, generateMipmap: args.generateMipmap });
+            if (self.onload) {
+              self.onload(self);
+            }
+          };
+          image.src = args.image;
+        } else {
+          bind.call(this);
+          gl.texImage2D(args.target, args.level, args.format, args.format, args.type, args.image);
+          if (args.generateMipmap) {
+            gl.generateMipmap(args.target);
+          }
+        }
+      } else {
+        if (args.width === null || args.height === null) {
+          throw new Error("If image is not specified, width and height are mandatory");
+        }
+        bind.call(this);
+        gl.texImage2D(args.target, args.level, args.format, args.width, args.height, 0, args.format, args.type, null);
+      }
     };
 
     this.setFilter(args.minFilter, args.magFilter);
     this.setWrap(args.wrapS, args.wrapT);
-    if (args.width !== undefined && args.height !== undefined) {
+    if ((args.width !== undefined && args.height !== undefined) || args.image !== undefined) {
       this.setImage({
         width: args.width,
         height: args.height,
         format: args.format,
         type: args.type,
-        pixels: args.pixels,
+        image: args.image,
       });
     }
   };
