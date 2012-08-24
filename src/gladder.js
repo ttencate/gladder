@@ -128,6 +128,7 @@ function Gladder(args) {
   var capabilityState = {};
   capabilityState[this.Capability.DITHER] = true;
 
+  // TODO merge into draw call
   this.enable = function() {
     for (var i = 0; i < arguments.length; ++i) {
       var cap = arguments[i];
@@ -710,6 +711,8 @@ function Gladder(args) {
       setParameter.call(this, gl.TEXTURE_WRAP_T, t === undefined ? s : t);
     };
 
+    // TODO support texSubImage2D
+    // TODO support copyTex(Sub)Image2D
     this.setImage = function(args) {
       processArgs(args, {
         width: null,
@@ -719,7 +722,7 @@ function Gladder(args) {
         format: gla.Texture.Format.RGBA,
         type: gla.Texture.Type.UNSIGNED_BYTE,
         image: null,
-        generateMipmap: false,
+        generateMipmap: true,
       });
       if (args.image !== null) {
         if (isString(args.image)) {
@@ -955,6 +958,8 @@ function Gladder(args) {
   // DRAWING //
   /////////////
 
+  // TODO accept a "stack" of multiple args, and merge them?
+  // TODO implement polygonOffset
   this.draw = function(args) {
     processArgs(args, {
       program: REQUIRED,
