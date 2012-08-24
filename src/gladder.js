@@ -190,18 +190,28 @@ function Gladder(args) {
   // VIEWPORT //
   //////////////
 
-  // TODO make this part of draw() arguments, with full as default
-  // TODO cache viewport
-  
-  this.viewport = {};
-
-  this.viewport.set = function(x, y, w, h) {
-    gl.viewport(x, y, w, h);
-  }
-
-  this.viewport.setFull = function() {
-    this.set(0, 0, canvas.width, canvas.height);
+  var viewport = {
+    x: 0,
+    y: 0,
+    width: canvas.width,
+    height: canvas.height,
   };
+
+  function setViewport(args) {
+    processArgs(args, {
+      x: 0,
+      y: 0,
+      width: canvas.width,
+      height: canvas.height,
+    });
+    if (viewport.x !== args.x || viewport.y !== args.y || viewport.width !== args.width || viewport.height !== args.height) {
+      gl.viewport(x, y, width, height);
+      viewport.x = x;
+      viewport.y = y;
+      viewport.width = width;
+      viewport.height = height;
+    }
+  }
 
   /////////////
   // BUFFERS //
@@ -932,16 +942,19 @@ function Gladder(args) {
       first: 0,
       count: REQUIRED,
       framebuffer: null,
+      viewport: { x: 0, y: 0, width: canvas.width, height: canvas.height },
     });
-
-    var program = args.program;
-    program.use();
 
     var framebuffer = args.framebuffer;
     bindFramebuffer(framebuffer);
     if (framebuffer !== null) {
       framebuffer.checkComplete();
     }
+
+    setViewport(args.viewport);
+
+    var program = args.program;
+    program.use();
 
     var currentTextureUnit = {};
     for (var key in args.uniforms) {
