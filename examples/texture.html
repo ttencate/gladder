@@ -51,35 +51,28 @@
       });
 
       var n = 12;
-      var flagWidth = 2;
-      var flagHeight = 1 + 1/3;
-      var textureWidth = 1.0;
-      var textureHeight = flagHeight / flagWidth;
       var data = new Float32Array((n+2) * (n-1) * 2 * 4);
       var i = 0;
-      function add(x, y) { data[i++] = x; data[i++] = y; }
-      function addPosition(x, y) { add(x * flagWidth, y * flagHeight); }
-      function addTexCoord(x, y) { add(x * textureWidth, y * textureHeight); }
+      function addPoint(x, y, s, t) {
+        data[i++] = x * 2;
+        data[i++] = y * 4/3;
+        data[i++] = s * 1;
+        data[i++] = t * 2/3;
+      }
       for (var y = 0; y < n; ++y) {
         for (var x = 0; x <= n; ++x) {
-          addPosition(x / n - 0.5, y / n - 0.5);
-          addTexCoord(x / n, y / n);
-
-          addPosition(x / n - 0.5, (y + 1) / n - 0.5);
-          addTexCoord(x / n, (y + 1) / n);
+          addPoint(x / n - 0.5, y / n - 0.5, x / n, y / n);
+          addPoint(x / n - 0.5, (y + 1) / n - 0.5, x / n, (y + 1) / n);
         }
-        addPosition(0.5, (y + 1) / n - 0.5);
-        addTexCoord(1.0, (y + 1) / n);
-
-        addPosition(-0.5, (y + 1) / n - 0.5);
-        addTexCoord(0.0, (y + 1) / n);
+        addPoint(0.5, (y + 1) / n - 0.5, 1.0, (y + 1) / n);
+        addPoint(-0.5, (y + 1) / n - 0.5, 0.0, (y + 1) / n);
       }
 
       var buffer = new gla.Buffer({
         data: data,
         views: {
-          position: { size: 2, type: gla.Buffer.Type.FLOAT, stride: 2 * 2 * 4 },
-          texCoord: { size: 2, type: gla.Buffer.Type.FLOAT, stride: 2 * 2 * 4, offset: 2 * 4 },
+          position: { size: 2, stride: 2 * 2 * 4 },
+          texCoord: { size: 2, stride: 2 * 2 * 4, offset: 2 * 4 },
         }
       });
 
