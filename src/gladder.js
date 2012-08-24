@@ -62,17 +62,20 @@ function Gladder(args) {
   /////////////
 
   // TODO implement WebGLContextAttributes (alpha, etc.)
-  processArgs(args, {
-    canvas: REQUIRED,
-    debug: false,
-    errorCallback: null,
-    callCallback: null,
-  });
+  function getGl(args) {
+    processArgs(args, {
+      canvas: REQUIRED,
+      debug: false,
+      errorCallback: null,
+      callCallback: null,
+    });
 
-  function getGl(canvas) {
+    var gl = null;
+    var canvas = getElement(args.canvas);
+
     var CONTEXT_NAMES = ["webgl", "experimental-webgl", "moz-webgl", "webkit-3d"];
     for (var i = 0; i < CONTEXT_NAMES.length; ++i) {
-      var gl = canvas.getContext(CONTEXT_NAMES[i]);
+      gl = canvas.getContext(CONTEXT_NAMES[i]);
       if (gl !== null) {
         break;
       }
@@ -80,32 +83,32 @@ function Gladder(args) {
     if (gl === null) {
       throw new Error("WebGL not supported");
     }
+
+    if (args.debug) {
+      if (WebGLDebugUtils === undefined) {
+        throw new Error("To use debug mode, you need to load webgl-debug.js. Get it from http://www.khronos.org/webgl/wiki/Debugging");
+      }
+      var onError = null;
+      if (args.errorCallback !== null) {
+        onError = function(err, funcName, passedArguments) {
+          args.errorCallback(
+              WebGLDebugUtils.glEnumToString(err) + " in call " +
+              funcName + "(" + Array.prototype.slice.call(passedArguments).join(", ") + ")");
+        };
+      }
+      var onCall = null;
+      if (args.callCallback !== null) {
+        onCall = function(funcName, passedArguments) {
+          args.callCallback(
+              funcName + "(" + Array.prototype.slice.call(passedArguments).join(", ") + ")");
+        };
+      }
+      gl = WebGLDebugUtils.makeDebugContext(gl, onError, onCall);
+    }
     return gl;
   }
 
-  gl = getGl(getElement(args.canvas));
-
-  if (args.debug) {
-    if (WebGLDebugUtils === undefined) {
-      throw new Error("To use debug mode, you need to load webgl-debug.js. Get it from http://www.khronos.org/webgl/wiki/Debugging");
-    }
-    var onError = null;
-    if (args.errorCallback !== null) {
-      onError = function(err, funcName, passedArguments) {
-        args.errorCallback(
-            WebGLDebugUtils.glEnumToString(err) + " in call " +
-            funcName + "(" + Array.prototype.slice.call(passedArguments).join(", ") + ")");
-      };
-    }
-    var onCall = null;
-    if (args.callCallback !== null) {
-      onCall = function(funcName, passedArguments) {
-        args.callCallback(
-            funcName + "(" + Array.prototype.slice.call(passedArguments).join(", ") + ")");
-      };
-    }
-    gl = WebGLDebugUtils.makeDebugContext(gl, onError, onCall);
-  }
+  gl = getGl(args);
 
   this.canvas = gl.canvas;
 
