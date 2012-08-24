@@ -24,6 +24,10 @@ function Gladder(args) {
     return Object.prototype.toString.call(x) === '[object Array]';
   }
 
+  function isInteger(x) {
+    return x === Math.floor(x);
+  }
+
   function getElement(element) {
     if (element === null) {
       throw new Error("Element is null");
@@ -259,9 +263,17 @@ function Gladder(args) {
       stride: 0,
       offset: 0,
     });
-    // TODO check args sanity:
-    // - stride <= item size, or 0
-    // - stride and offset multiple of value size
+
+    var typeSize = sizeOfType(args.type);
+    if (args.stride > 0 && args.stride < typeSize * args.size) {
+      throw new Error("stride == " + args.stride + ", if nonzero, must be at least size * sizeof(type) == " + args.size + " * " + typeSize + " == " + (args.size * args.typeSize));
+    }
+    if (!isInteger(args.stride / typeSize)) {
+      throw new Error("stride == " + args.stride + " must be a multiple of sizeof(type) == " + typeSize);
+    }
+    if (!isInteger(args.offset / typeSize)) {
+      throw new Error("offset == " + args.offset + " must be a multiple of sizeof(type) == " + typeSize);
+    }
 
     this.buffer = buffer;
     this.size = args.size;
