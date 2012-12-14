@@ -216,7 +216,7 @@ function Gladder(args) {
       height: gl.canvas.height,
     });
     if (viewport.x !== args.x || viewport.y !== args.y || viewport.width !== args.width || viewport.height !== args.height) {
-      gl.viewport(x, y, width, height);
+      gl.viewport(args.x, args.y, args.width, args.height);
       viewport.x = x;
       viewport.y = y;
       viewport.width = width;
@@ -525,6 +525,7 @@ function Gladder(args) {
     function enableArray(enabled) {
       if (enabled != arrayEnabled) {
         if (enabled) {
+          // TODO borks if attribute not found (-1)
           gl.enableVertexAttribArray(glAttribute);
         } else {
           gl.disableVertexAttribArray(glAttribute);
@@ -901,6 +902,7 @@ function Gladder(args) {
     }
   };
 
+  // TODO: set these on Framebuffer
   this.CREATE_TEXTURE_2D = new Object();
   this.CREATE_RENDERBUFFER = new Object();
 
@@ -972,6 +974,7 @@ function Gladder(args) {
       first: 0,
       count: REQUIRED,
       framebuffer: null,
+      // TODO: use framebuffer size if framebuffer is given
       viewport: { x: 0, y: 0, width: gl.canvas.width, height: gl.canvas.height },
     });
 
