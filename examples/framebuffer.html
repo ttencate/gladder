@@ -12,7 +12,7 @@
 
     <canvas id="canvas" width="640" height="640"></canvas>
 
-    <script id="triangle-vertex-shader" type="x-shader/x-vertex">
+    <script id="triangle-vertex-shader" type="x-shader/x-vertex" class="display-as-pre">
       uniform mat4 transform;
       attribute vec2 position;
       varying vec4 color;
@@ -23,7 +23,7 @@
       }
     </script>
 
-    <script id="triangle-fragment-shader" type="x-shader/x-fragment">
+    <script id="triangle-fragment-shader" type="x-shader/x-fragment" class="display-as-pre">
       precision mediump float;
       varying vec2 pos;
       void main() {
@@ -33,7 +33,7 @@
       }
     </script>
 
-    <script id="blur-vertex-shader" type="x-shader/x-vertex">
+    <script id="blur-vertex-shader" type="x-shader/x-vertex" class="display-as-pre">
       attribute vec2 position;
       varying vec2 texCoord;
       void main() {
@@ -42,7 +42,7 @@
       }
     </script>
 
-    <script id="blur-fragment-shader" type="x-shader/x-fragment">
+    <script id="blur-fragment-shader" type="x-shader/x-fragment" class="display-as-pre">
       precision mediump float;
       varying vec2 texCoord;
       uniform vec2 step;
@@ -57,7 +57,7 @@
       }
     </script>
 
-    <script>
+    <script id="main" class="display-as-pre">
       var gla = new Gladder({
         canvas: "canvas",
         debug: true,
@@ -139,5 +139,7 @@
         });
       });
     </script>
+
+    <script src="loader.js"></script>
   </body>
 </html>

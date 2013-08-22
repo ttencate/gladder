@@ -12,7 +12,7 @@
 
     <canvas id="canvas" width="640" height="640"></canvas>
 
-    <script id="vertex-shader" type="x-shader/x-vertex">
+    <script id="vertex-shader" type="x-shader/x-vertex" class="display-as-pre">
       attribute vec2 position;
       attribute vec3 color;
       varying vec3 col;
@@ -22,7 +22,7 @@
       }
     </script>
 
-    <script id="fragment-shader" type="x-shader/x-fragment">
+    <script id="fragment-shader" type="x-shader/x-fragment" class="display-as-pre">
       precision mediump float;
       varying vec3 col;
       void main() {
@@ -30,7 +30,7 @@
       }
     </script>
 
-    <script>
+    <script id="main" class="display-as-pre">
       var gla = new Gladder({
         canvas: "canvas",
         debug: true,
@@ -95,6 +95,8 @@
         });
       });
     </script>
+
+    <script src="loader.js"></script>
   </body>
 </html>
 
