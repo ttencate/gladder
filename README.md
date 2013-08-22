@@ -1,7 +1,9 @@
 What is Gladder?
 ===============
 
-Gladder is a WebGL framework, written in JavaScript. Gladder is...
+Gladder is a WebGL framework, written in CoffeeScript, compiling down to pure JavaScript.
+
+Gladder is...
 
 * ... opaque. It does not expose WebGL, but rather aims to wrap it in a straightforward way.
 * ... thin. Many Gladder classes are direct equivalents of WebGL constructs.
